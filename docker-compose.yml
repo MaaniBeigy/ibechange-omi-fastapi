@@ -23,5 +23,25 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  metabase_db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER_METABASE}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_METABASE}
+      POSTGRES_DB: ${POSTGRES_DB_METABASE}
+    volumes:
+      - metabase_data:/var/lib/postgresql/data
+
+  metabase:
+    image: metabase/metabase:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - metabase_db
+      - db
+
 volumes:
   postgres_data:
+  metabase_data:
