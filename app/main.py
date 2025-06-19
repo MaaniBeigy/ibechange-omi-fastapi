@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from sqlmodel import SQLModel, create_engine
 
-from app.dependencies import get_db
 from app.routers import (
     missions,
     recommendation_plans,
