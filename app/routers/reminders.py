@@ -16,7 +16,7 @@ def create_reminders(reminders: ReminderList, db: Session = Depends(get_db)):
         ).first()
         if existing_reminder:
             continue
-        db_reminder = Reminder(user_id=user_id, **reminder.dict())
+        db_reminder = Reminder(user_id=user_id, **reminder.model_dump())
         db.add(db_reminder)
     db.commit()
     return reminders

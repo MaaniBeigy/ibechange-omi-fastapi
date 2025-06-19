@@ -40,12 +40,12 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
 
     # Handle health habit assessments
     for user_id, hha in updates.health_habit_assessments.items():
-        db_hha = HealthHabitAssessment(user_id=user_id, **hha.dict())
+        db_hha = HealthHabitAssessment(user_id=user_id, **hha.model_dump())
         db.add(db_hha)
 
     # Handle new missions and contents
     for user_id, nmc in updates.new_missions_and_contents.items():
-        db_nmc = NewMissionContent(user_id=user_id, **nmc.dict())
+        db_nmc = NewMissionContent(user_id=user_id, **nmc.model_dump())
         db.add(db_nmc)
 
     db.commit()

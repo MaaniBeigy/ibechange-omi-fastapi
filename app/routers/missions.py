@@ -16,7 +16,7 @@ def create_missions(missions: MissionList, db: Session = Depends(get_db)):
         ).first()
         if existing_mission:
             continue
-        db_mission = Mission(**mission.dict())
+        db_mission = Mission(**mission.model_dump())
         db.add(db_mission)
     db.commit()
     return missions

@@ -18,7 +18,7 @@ def create_selected_contents(
         ).first()
         if existing_content:
             continue
-        db_content = SelectedContent(user_id=user_id, **content.dict())
+        db_content = SelectedContent(user_id=user_id, **content.model_dump())
         db.add(db_content)
     db.commit()
     return selected_contents

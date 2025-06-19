@@ -16,7 +16,7 @@ def create_resources(resources: ResourceList, db: Session = Depends(get_db)):
         ).first()
         if existing_res:
             continue
-        db_res = Resource(**res.dict())
+        db_res = Resource(**res.model_dump())
         db.add(db_res)
     db.commit()
     return resources

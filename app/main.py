@@ -18,7 +18,6 @@ from app.routers import (
 
 load_dotenv()
 
-app = FastAPI(title="OMI Recommendation Timing Module")
 
 # Database setup
 user = os.getenv("POSTGRES_USER")
@@ -41,7 +40,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app.lifespan = lifespan
+app = FastAPI(title="OMI Recommendation Timing Module", lifespan=lifespan)
 
 # Include routers
 app.include_router(recommendations.router)
