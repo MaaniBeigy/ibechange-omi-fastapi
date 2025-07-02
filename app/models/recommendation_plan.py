@@ -6,6 +6,8 @@ from sqlmodel import Field, SQLModel
 
 
 class RecommendationPlan(SQLModel, table=True):
+    __tablename__ = "RecommendationPlan"
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     content_id: str

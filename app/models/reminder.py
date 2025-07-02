@@ -6,6 +6,8 @@ from sqlmodel import JSON, Field, SQLModel
 
 
 class Reminder(SQLModel, table=True):
+    __tablename__ = "Reminder"
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     reminders: List[Dict] = Field(sa_type=JSON)

@@ -6,6 +6,8 @@ from sqlmodel import ARRAY, Field, SQLModel, String
 
 
 class SelectedContent(SQLModel, table=True):
+    __tablename__ = "SelectedContent"
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     contents: List[str] = Field(sa_type=ARRAY(String))

@@ -6,6 +6,8 @@ from sqlmodel import ARRAY, Field, SQLModel, String
 
 
 class Resource(SQLModel, table=True):
+    __tablename__ = "Resource"
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     res_id: str = Field(unique=True, index=True)
     mission: List[str] = Field(sa_type=ARRAY(String))

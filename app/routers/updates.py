@@ -4,12 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
-from app.models.update import (
-    HealthHabitAssessment,
-    NewMissionContent,
-    User,
-    UserFeedback,
-)
+from app.models.update import HealthHabitAssessment, NewMissionContent, UserFeedback
+from app.models.user import User
 from app.schemas.update import UpdateCreate
 
 router = APIRouter(prefix="/updates", tags=["Updates"])

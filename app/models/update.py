@@ -5,26 +5,9 @@ from typing import Dict, List, Optional
 from sqlmodel import JSON, Field, SQLModel
 
 
-class User(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(unique=True, index=True)
-    gender: Optional[str] = Field(default=None)
-    height: Optional[int] = Field(default=None)
-    user_age: Optional[int] = Field(default=None)
-    weight: Optional[int] = Field(default=None)
-    wearable: Optional[str] = Field(default=None)
-    residence: Optional[str] = Field(default=None)
-    enrolment_date: Optional[str] = Field(default=None)
-    informed_consent: Optional[str] = Field(default=None)
-    recruitment_center: Optional[str] = Field(default=None)
-    level: Optional[int] = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    modified_at: Optional[datetime] = Field(default=None)
-    deleted_at: Optional[datetime] = Field(default=None)
-    is_deleted: bool = Field(default=False)
-
-
 class UserFeedback(SQLModel, table=True):
+    __tablename__ = "UserFeedback"
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     events: List[Dict] = Field(sa_type=JSON)
@@ -35,6 +18,8 @@ class UserFeedback(SQLModel, table=True):
 
 
 class HealthHabitAssessment(SQLModel, table=True):
+    __tablename__ = "HealthHabitAssessment"
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     hhs: Dict = Field(sa_type=JSON)
@@ -46,6 +31,8 @@ class HealthHabitAssessment(SQLModel, table=True):
 
 
 class NewMissionContent(SQLModel, table=True):
+    __tablename__ = "NewMissionContent"
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     selection_timestamp: Optional[datetime] = Field(default=None)
