@@ -1,17 +1,4 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3200:3200"
-    depends_on:
-      - db
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-
   db:
     image: postgres:15
     environment:
@@ -22,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   metabase_db:
     image: postgres:15
@@ -31,6 +23,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB_METABASE}
     volumes:
       - metabase_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3200:3200"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - .:/app
 
   metabase:
     image: metabase/metabase:latest
