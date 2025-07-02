@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -31,7 +31,7 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
         user = db.exec(select(User).where(User.user_id == user_id)).first()
         if user:
             user.is_deleted = True
-            user.deleted_at = datetime.utcnow()
+            user.deleted_at = datetime.now(timezone.utc)
             db.add(user)
 
     # Handle health habit assessments

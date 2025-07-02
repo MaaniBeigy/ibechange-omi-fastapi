@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from dotenv import load_dotenv
@@ -55,16 +55,20 @@ def setup_selected_content():
         content = SelectedContent(
             user_id="user_01",
             contents=["ARc5", "ARc13"],
-            mission_start_time=datetime.utcnow(),
-            mission_end_time=datetime.utcnow() + timedelta(days=1),
+            mission_start_time=datetime.now(timezone.utc),
+            mission_end_time=datetime.now(timezone.utc) + timedelta(days=1),
         )
         session.add(content)
         session.commit()
 
 
 def test_get_recommendation_plans(client, setup_selected_content):
-    start_time = datetime.utcnow().isoformat()
-    end_time = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    start_time = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    end_time = (
+        (datetime.now(timezone.utc) + timedelta(days=1))
+        .replace(tzinfo=None)
+        .isoformat()
+    )
     response = client.get(
         f"/recommendation_plans/?start_time={start_time}&end_time={end_time}"
     )
@@ -76,18 +80,26 @@ def test_get_recommendation_plans(client, setup_selected_content):
 
 
 def test_get_existing_recommendation_plans(client, setup_selected_content):
-    start_time = datetime.utcnow()
-    end_time = start_time + timedelta(days=1)
+    start_time = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    end_time = (
+        (datetime.now(timezone.utc) + timedelta(days=1))
+        .replace(tzinfo=None)
+        .isoformat()
+    )
     with Session(engine) as session:
         plan = RecommendationPlan(
             user_id="user_01",
             content_id="ARc5",
-            scheduled_for=start_time + timedelta(hours=1),
+            scheduled_for=(
+                (datetime.now(timezone.utc) + timedelta(hours=1))
+                .replace(tzinfo=None)
+                .isoformat()
+            ),
         )
         session.add(plan)
         session.commit()
     response = client.get(
-        f"/recommendation_plans/?start_time={start_time.isoformat()}&end_time={end_time.isoformat()}"
+        f"/recommendation_plans/?start_time={start_time}&end_time={end_time}"
     )
     assert response.status_code == 200
     data = response.json()

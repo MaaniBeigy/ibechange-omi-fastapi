@@ -14,21 +14,31 @@ from app.schemas.recommendation_plan import (
     RecommendationPlanResponse,
 )
 from app.services.recommendation_plan_service import generate_recommendation_plan
+from pydantic import field_validator, BaseModel
+from datetime import datetime
 
 router = APIRouter(prefix="/recommendation_plans", tags=["Recommendation Plans"])
 
+class TimeWindow(BaseModel):
+    start_time: datetime
+    end_time: datetime
 
 @router.get("/", response_model=RecommendationPlanList)
 def get_recommendation_plans(
-    start_time: datetime = Query(...),
-    end_time: datetime = Query(...),
+    start_time: str = Query(...),
+    end_time: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    try:
+        start_dt = datetime.fromisoformat(start_time)
+        end_dt = datetime.fromisoformat(end_time)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid datetime format")
     # Check if plans already exist for the given time range and users
     plans = db.exec(
         select(RecommendationPlan)
-        .where(RecommendationPlan.scheduled_for >= start_time)
-        .where(RecommendationPlan.scheduled_for <= end_time)
+        .where(RecommendationPlan.scheduled_for >= start_dt)
+        .where(RecommendationPlan.scheduled_for <= end_dt)
         .where(RecommendationPlan.is_deleted == False)
     ).all()
 
@@ -59,7 +69,7 @@ def get_recommendation_plans(
     new_plans = []
     for content in selected_contents:
         plans = generate_recommendation_plan(
-            content.user_id, content.contents, start_time, end_time, db
+            content.user_id, content.contents, start_dt, end_dt, db
         )
         new_plans.extend(plans)
 
