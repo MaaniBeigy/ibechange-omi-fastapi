@@ -20,8 +20,6 @@ class Mission {
   -id: uuid
   -mission_id: str
   -weekly_frequency: int
-  -mission_start_time: datetime
-  -mission_end_time: datetime
   -created_at: datetime
   -modified_at: datetime
   -deleted_at: datetime
@@ -228,7 +226,9 @@ class NewMissionContent {
   -id: uuid
   -user_id: str
   -selection_timestamp: datetime
-  -new_missions: List[Dict]
+  -mission_id: uuid
+  -mission_start_time: datetime
+  -mission_end_time: datetime
   -created_at: datetime
   -modified_at: datetime
   -deleted_at: datetime
