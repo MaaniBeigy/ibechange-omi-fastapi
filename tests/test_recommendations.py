@@ -53,7 +53,7 @@ def test_create_recommendations(client):
         "recommendations": [
             {
                 "rec_id": "ERc1",
-                "mission": ["EM58", "EM59"],
+                "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],
                 "comb": ["Psychological capability"],
@@ -71,7 +71,7 @@ def test_create_duplicate_recommendations(client):
         "recommendations": [
             {
                 "rec_id": "ERc1",
-                "mission": ["EM58", "EM59"],
+                "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],
                 "comb": ["Psychological capability"],

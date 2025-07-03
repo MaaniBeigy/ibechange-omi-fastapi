@@ -11,7 +11,7 @@ class RecommendationPlan(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True)
     content_id: str
-    mission_id: Optional[str] = Field(default=None)
+    mission_id: Optional[uuid.UUID] = Field(default=None)
     scheduled_for: datetime
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
