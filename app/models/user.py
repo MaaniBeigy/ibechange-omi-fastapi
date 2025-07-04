@@ -33,7 +33,7 @@ class HealthHabitAssessment(SQLModel, table=True):
     __tablename__ = "HealthHabitAssessment"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: uuid.UUID = Field(index=True)
     hhs: Dict = Field(sa_type=JSON)
     assessment_timestamp: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
