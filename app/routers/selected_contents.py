@@ -19,6 +19,7 @@ def create_selected_contents(
         if not existing_user:
             db_user = User(user_id=user_id)
             db.add(db_user)
+        # Check if SelectedContent exists, create if not
         existing_content = db.exec(
             select(SelectedContent).where(SelectedContent.user_id == user_id)
         ).first()
