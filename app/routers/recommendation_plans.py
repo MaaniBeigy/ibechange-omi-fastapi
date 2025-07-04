@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
@@ -14,14 +13,9 @@ from app.schemas.recommendation_plan import (
     RecommendationPlanResponse,
 )
 from app.services.recommendation_plan_service import generate_recommendation_plan
-from pydantic import field_validator, BaseModel
-from datetime import datetime
 
 router = APIRouter(prefix="/recommendation_plans", tags=["Recommendation Plans"])
 
-class TimeWindow(BaseModel):
-    start_time: datetime
-    end_time: datetime
 
 @router.get("/", response_model=RecommendationPlanList)
 def get_recommendation_plans(
