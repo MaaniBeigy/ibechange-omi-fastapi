@@ -30,6 +30,7 @@ class Mission {
 
 class User {
   -id: uuid
+  -user_id: uuid
   -created_at: datetime
   -characteristics: Dict[str, Any]
   -events: List[Dict[str, Any]]
@@ -185,7 +186,7 @@ class Resource {
 
 class SelectedContent {
   -id: uuid
-  -user_id: str
+  -user_id: uuid
   -contents: List[str]
   -mission_start_time: datetime
   -mission_end_time: datetime
@@ -199,7 +200,7 @@ class SelectedContent {
 
 class UserFeedback {
   -id: uuid
-  -user_id: str
+  -user_id: uuid
   -events: List[Dict]
   -created_at: datetime
   -modified_at: datetime
@@ -211,7 +212,7 @@ class UserFeedback {
 
 class HealthHabitAssessment {
   -id: uuid
-  -user_id: str
+  -user_id: uuid
   -hhs: Dict
   -assessment_timestamp: datetime
   -created_at: datetime
@@ -224,7 +225,7 @@ class HealthHabitAssessment {
 
 class NewMissionContent {
   -id: uuid
-  -user_id: str
+  -user_id: uuid
   -selection_timestamp: datetime
   -mission_id: uuid
   -mission_start_time: datetime

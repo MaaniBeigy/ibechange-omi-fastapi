@@ -53,7 +53,7 @@ def client():
 def setup_selected_content():
     with Session(engine) as session:
         content = SelectedContent(
-            user_id="user_01",
+            user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
             contents=["ARc5", "ARc13"],
             mission_start_time=datetime.now(timezone.utc),
             mission_end_time=datetime.now(timezone.utc) + timedelta(days=1),
@@ -76,7 +76,10 @@ def test_get_recommendation_plans(client, setup_selected_content):
     data = response.json()
     assert "recommendation_plans" in data
     assert len(data["recommendation_plans"]) > 0
-    assert data["recommendation_plans"][0]["user_id"] == "user_01"
+    assert (
+        data["recommendation_plans"][0]["user_id"]
+        == "10b58b39-9a4c-46ad-b98d-03dc28735e6b"
+    )
 
 
 def test_get_existing_recommendation_plans(client, setup_selected_content):
@@ -88,7 +91,7 @@ def test_get_existing_recommendation_plans(client, setup_selected_content):
     )
     with Session(engine) as session:
         plan = RecommendationPlan(
-            user_id="user_01",
+            user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
             content_id="ARc5",
             scheduled_for=(
                 (datetime.now(timezone.utc) + timedelta(hours=1))

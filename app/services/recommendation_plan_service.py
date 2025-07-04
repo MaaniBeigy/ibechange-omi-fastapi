@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime
 from typing import List
 
@@ -12,7 +13,7 @@ load_dotenv()
 
 
 def generate_recommendation_plan(
-    user_id: str,
+    user_id: uuid.UUID,
     contents: List[str],
     start_time: datetime,
     end_time: datetime,

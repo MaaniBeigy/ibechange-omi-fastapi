@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from sqlmodel import JSON, Field, SQLModel
 
@@ -9,17 +9,8 @@ class User(SQLModel, table=True):
     __tablename__ = "User"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(unique=True, index=True)
-    gender: Optional[str] = Field(default=None)
-    height: Optional[int] = Field(default=None)
-    user_age: Optional[int] = Field(default=None)
-    weight: Optional[int] = Field(default=None)
-    wearable: Optional[str] = Field(default=None)
-    residence: Optional[str] = Field(default=None)
-    enrolment_date: Optional[str] = Field(default=None)
-    informed_consent: Optional[str] = Field(default=None)
-    recruitment_center: Optional[str] = Field(default=None)
-    level: Optional[int] = Field(default=None)
+    user_id: uuid.UUID = Field(unique=True, index=True)
+    characteristics: Dict[str, Any] = Field(default_factory=dict, sa_type=JSON)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
@@ -30,7 +21,7 @@ class UserFeedback(SQLModel, table=True):
     __tablename__ = "UserFeedback"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: uuid.UUID = Field(index=True)
     events: List[Dict] = Field(sa_type=JSON)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
@@ -55,7 +46,7 @@ class NewMissionContent(SQLModel, table=True):
     __tablename__ = "NewMissionContent"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: uuid.UUID = Field(index=True)
     selection_timestamp: Optional[datetime] = Field(default=None)
     mission_id: str = Field(sa_type=JSON)
     mission_start_time: Optional[datetime] = Field(default=None)

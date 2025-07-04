@@ -9,7 +9,7 @@ class Reminder(SQLModel, table=True):
     __tablename__ = "Reminder"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: str = Field(index=True)
+    user_id: uuid.UUID = Field(index=True)
     reminders: List[Dict] = Field(sa_type=JSON)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)

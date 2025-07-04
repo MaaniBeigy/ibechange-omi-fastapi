@@ -14,7 +14,7 @@ docker compose down
 ```bash
 curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: application/json" -d '{
   "selected_contents": {
-    "user_01": {
+    "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
       "contents": ["content_1", "content_2"],
       "mission_start_time": "2025-01-10T08:00:00",
       "mission_end_time": "2025-01-20T18:00:00"

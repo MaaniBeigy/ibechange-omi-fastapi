@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -10,7 +11,7 @@ class RecommendationPlanItem(BaseModel):
 
 
 class RecommendationPlanResponse(BaseModel):
-    user_id: str
+    user_id: UUID
     plans: List[RecommendationPlanItem]
 
 

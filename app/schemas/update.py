@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -16,16 +17,8 @@ class UserFeedback(BaseModel):
 
 
 class NewUser(BaseModel):
-    gender: Optional[str]
-    height: Optional[int]
-    userAge: Optional[int]
-    weight: Optional[int]
-    wearable: Optional[str]
-    residence: Optional[str]
-    enrolmentDate: Optional[str]
-    informedConsent: Optional[str]
-    recruitmentCenter: Optional[str]
-    level: Optional[int]
+    user_id: UUID
+    characteristics: Dict[str, Any]
 
 
 class HealthHabitAssessment(BaseModel):
