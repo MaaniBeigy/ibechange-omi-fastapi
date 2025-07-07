@@ -29,7 +29,6 @@ class HealthHabitAssessment(BaseModel):
 class NewMission(BaseModel):
     mission: str
     recommendations: List[str]
-    resources: List[str]
 
 
 class NewMissionContent(BaseModel):

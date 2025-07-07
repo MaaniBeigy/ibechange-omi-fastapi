@@ -10,7 +10,6 @@ from app.routers import (
     recommendation_plans,
     recommendations,
     reminders,
-    resources,
     selected_contents,
     updates,
 )
@@ -43,7 +42,6 @@ app = FastAPI(title="OMI Recommendation Timing Module", lifespan=lifespan)
 
 # Include routers
 app.include_router(recommendations.router)
-app.include_router(resources.router)
 app.include_router(missions.router)
 app.include_router(updates.router)
 app.include_router(selected_contents.router)

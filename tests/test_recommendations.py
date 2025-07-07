@@ -52,7 +52,7 @@ def test_create_recommendations(client):
     recommendations = {
         "recommendations": [
             {
-                "rec_id": "ERc1",
+                "content_id": "ERc1",
                 "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],
@@ -70,7 +70,7 @@ def test_create_duplicate_recommendations(client):
     recommendations = {
         "recommendations": [
             {
-                "rec_id": "ERc1",
+                "content_id": "ERc1",
                 "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],
@@ -85,6 +85,6 @@ def test_create_duplicate_recommendations(client):
     assert response.status_code == 200
     with Session(engine) as session:
         count = session.exec(
-            select(Recommendation).where(Recommendation.rec_id == "ERc1")
+            select(Recommendation).where(Recommendation.content_id == "ERc1")
         ).all()
         assert len(count) == 1

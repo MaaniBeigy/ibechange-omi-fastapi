@@ -7,11 +7,12 @@ from sqlmodel import ARRAY, Field, SQLModel, String
 
 class Recommendation(SQLModel, table=True):
     __tablename__ = "Recommendation"
-    
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    rec_id: str = Field(unique=True, index=True)
+    content_id: str = Field(unique=True, index=True)
     missions: List[str] = Field(sa_type=ARRAY(String))
     objective: List[str] = Field(sa_type=ARRAY(String))
+    description: Optional[str] = Field(default=None, sa_type=String, nullable=True)
     hapa: List[str] = Field(sa_type=ARRAY(String))
     comb: List[str] = Field(sa_type=ARRAY(String))
     intervention_type: List[str] = Field(sa_type=ARRAY(String))

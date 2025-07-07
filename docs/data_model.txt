@@ -54,10 +54,17 @@ class User {
 
 class Recommendation {
   -id: uuid
-  -created_at: datetime
-  -missions: List[str]
   -content_id: str
+  -missions: List[str]
+  -objective: List[str]
   -description: varchar
+  -hapa: List[str]
+  -comb: List[str]
+  -intervention_type: List[str]
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
   --
   +init()
 }
@@ -168,21 +175,6 @@ class NotificationEnvironment {
   +calculateReward()
 }
 
-class Resource {
-  -id: uuid
-  -res_id: str
-  -mission: List[str]
-  -objective: List[str]
-  -hapa: List[str]
-  -comb: List[str]
-  -intervention_type: List[str]
-  -created_at: datetime
-  -modified_at: datetime
-  -deleted_at: datetime
-  -is_deleted: bool
-  --
-  +init()
-}
 
 class SelectedContent {
   -id: uuid
@@ -257,7 +249,6 @@ NotificationEnvironment "1" --> "1" Model : loads
 NotificationEnvironment "1" --> "1" Model : trains
 NotificationEnvironment "1" --> "*" Event : generates
 NotificationEnvironment "1" --> "*" Reward : calculates
-Resource "1" --> "*" Mission : belongs to
 SelectedContent "*" --> "1" User : assigned to
 HealthHabitAssessment "*" --> "1" User : belongs to
 NewMissionContent "1" --> "1" Mission : belongs to

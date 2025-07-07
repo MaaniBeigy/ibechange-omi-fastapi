@@ -14,7 +14,7 @@ def create_recommendations(
 ):
     for rec in recommendations.recommendations:
         existing_rec = db.exec(
-            select(Recommendation).where(Recommendation.rec_id == rec.rec_id)
+            select(Recommendation).where(Recommendation.content_id == rec.content_id)
         ).first()
         if existing_rec:
             continue
