@@ -215,7 +215,7 @@ class HealthHabitAssessment {
   +init()
 }
 
-class NewMissionContent {
+class MissionContent {
   -id: uuid
   -user_id: uuid
   -selection_timestamp: datetime
@@ -239,7 +239,7 @@ User "1" --> "*" Context : updates
 User "1" --> "*" Motivation : calculates
 User "1" --> "*" MemoryAccessibility : calculates
 User "1" --> "*" UserFeedback : provides
-User "1" --> "*" NewMissionContent : selects
+User "1" --> "*" MissionContent : selects
 Persona "1" --> "*" Model : contains
 Recommendation "1" --> "*" Mission : belongs to
 RecommendationPlan "1" --> "1" Mission : belongs to
@@ -251,6 +251,6 @@ NotificationEnvironment "1" --> "*" Event : generates
 NotificationEnvironment "1" --> "*" Reward : calculates
 SelectedContent "*" --> "1" User : assigned to
 HealthHabitAssessment "*" --> "1" User : belongs to
-NewMissionContent "1" --> "1" Mission : belongs to
+MissionContent "1" --> "1" Mission : belongs to
 
 @enduml

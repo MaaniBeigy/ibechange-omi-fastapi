@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
-from app.models.user import HealthHabitAssessment, NewMissionContent, User, UserFeedback
+from app.models.user import HealthHabitAssessment, MissionContent, User, UserFeedback
 from app.schemas.update import UpdateCreate
 
 router = APIRouter(prefix="/updates", tags=["Updates"])
@@ -40,7 +40,7 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
 
     # Handle new missions and contents
     for user_id, nmc in updates.new_missions_and_contents.items():
-        db_nmc = NewMissionContent(user_id=user_id, **nmc.model_dump())
+        db_nmc = MissionContent(user_id=user_id, **nmc.model_dump())
         db.add(db_nmc)
 
     db.commit()

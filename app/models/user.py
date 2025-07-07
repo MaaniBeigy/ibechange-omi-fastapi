@@ -42,8 +42,8 @@ class HealthHabitAssessment(SQLModel, table=True):
     is_deleted: bool = Field(default=False)
 
 
-class NewMissionContent(SQLModel, table=True):
-    __tablename__ = "NewMissionContent"
+class MissionContent(SQLModel, table=True):
+    __tablename__ = "MissionContent"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True)
