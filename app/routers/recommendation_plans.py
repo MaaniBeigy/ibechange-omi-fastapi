@@ -62,8 +62,10 @@ def get_recommendation_plans(
 
     new_plans = []
     for content in selected_contents:
+        # Extract content_id strings from list of dicts
+        content_ids = [c["id"] for c in content.contents]
         plans = generate_recommendation_plan(
-            content.user_id, content.contents, start_dt, end_dt, db
+            content.user_id, content_ids, start_dt, end_dt, db
         )
         new_plans.extend(plans)
 

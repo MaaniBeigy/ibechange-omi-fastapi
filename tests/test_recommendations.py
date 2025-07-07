@@ -53,6 +53,7 @@ def test_create_recommendations(client):
         "recommendations": [
             {
                 "content_id": "ERc1",
+                "content_type": "recommendation",
                 "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],
@@ -71,6 +72,7 @@ def test_create_duplicate_recommendations(client):
         "recommendations": [
             {
                 "content_id": "ERc1",
+                "content_type": "recommendation",
                 "missions": ["EM58", "EM59"],
                 "objective": ["EO1"],
                 "hapa": [],

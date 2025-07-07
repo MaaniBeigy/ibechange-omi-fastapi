@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-from sqlmodel import ARRAY, Field, SQLModel, String
+from sqlmodel import ARRAY, JSON, Field, SQLModel, String
 
 
 class SelectedContent(SQLModel, table=True):
@@ -10,7 +10,7 @@ class SelectedContent(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True)
-    contents: List[str] = Field(sa_type=ARRAY(String))
+    contents: List[dict] = Field(default_factory=list, sa_type=JSON)  # List of content dicts: [{id, type, mission_id}, ...]
     mission_start_time: Optional[datetime] = Field(default=None)
     mission_end_time: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

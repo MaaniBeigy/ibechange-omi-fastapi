@@ -10,6 +10,7 @@ class Recommendation(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     content_id: str = Field(unique=True, index=True)
+    content_type: str = Field(index=True)
     missions: List[str] = Field(sa_type=ARRAY(String))
     objective: List[str] = Field(sa_type=ARRAY(String))
     description: Optional[str] = Field(default=None, sa_type=String, nullable=True)

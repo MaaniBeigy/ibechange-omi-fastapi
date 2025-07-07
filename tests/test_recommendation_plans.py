@@ -54,7 +54,10 @@ def setup_selected_content():
     with Session(engine) as session:
         content = SelectedContent(
             user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
-            contents=["ARc5", "ARc13"],
+            contents=[
+                {"id": "NRc30", "type": "recommendation", "mission_id": "NM31"},
+                {"id": "NRc54", "type": "recommendation", "mission_id": "NM31"},
+            ],
             mission_start_time=datetime.now(timezone.utc),
             mission_end_time=datetime.now(timezone.utc) + timedelta(days=1),
         )
