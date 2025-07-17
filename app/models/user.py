@@ -16,6 +16,10 @@ class User(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
     is_deleted: bool = Field(default=False)
 
+    def deleteUser(self, date_disabled: datetime):
+        self.is_deleted = True
+        self.deleted_at = date_disabled
+
 
 class UserFeedback(SQLModel, table=True):
     __tablename__ = "UserFeedback"
@@ -48,7 +52,7 @@ class MissionContent(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True)
     selection_timestamp: Optional[datetime] = Field(default=None)
-    mission_id: str = Field(sa_type=JSON)
+    mission_id: str = Field(index=True)
     mission_start_time: Optional[datetime] = Field(default=None)
     mission_end_time: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
