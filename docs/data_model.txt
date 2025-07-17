@@ -41,6 +41,7 @@ class User {
   -memory_accessibility: List[Dict[str, float]]
   --
   +init()
+  +deleteUser()
   +getEvents(): List[Dict[str, Any]]
   +generateEvents(): Dict[str, Any]
   +getMotivation(): List[Dict[str, float]]
@@ -220,9 +221,23 @@ class MissionContent {
   -id: uuid
   -user_id: uuid
   -selection_timestamp: datetime
-  -mission_id: uuid
+  -mission_id: str
   -mission_start_time: datetime
   -mission_end_time: datetime
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  --
+  +init()
+}
+
+class EscalationLevel {
+  -id: uuid
+  -user_id: uuid
+  -update_timestamp: datetime
+  -level: int
+  -pillar_id: str
   -created_at: datetime
   -modified_at: datetime
   -deleted_at: datetime
@@ -241,6 +256,7 @@ User "1" --> "*" Motivation : calculates
 User "1" --> "*" MemoryAccessibility : calculates
 User "1" --> "*" UserFeedback : provides
 User "1" --> "*" MissionContent : selects
+User "1" --> "*" EscalationLevel : has
 Persona "1" --> "*" Model : contains
 Recommendation "1" --> "*" Mission : belongs to
 RecommendationPlan "1" --> "1" Mission : belongs to
