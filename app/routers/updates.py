@@ -57,6 +57,21 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
     from app.models.recommendation import Recommendation
 
     for r_id in recommendation_ids:
+        # Find all missions this recommendation should be linked to
+        linked_missions = set()
+        # Check new_missions_and_contents for mission links
+        for nmc in updates.new_missions_and_contents.values():
+            for mission in nmc.new_missions:
+                if hasattr(mission, "recommendations") and r_id in getattr(mission, "recommendations", []):
+                    if hasattr(mission, "mission"):
+                        linked_missions.add(mission.mission)
+        # Check user_feedback for mission links
+        for feedback in updates.user_feedback.values():
+            for event in feedback.events:
+                props = event.properties
+                if isinstance(props, dict):
+                    if props.get("content_id") == r_id and props.get("mission_id"):
+                        linked_missions.add(props["mission_id"])
         existing = db.exec(
             select(Recommendation).where(
                 Recommendation.content_id == r_id, Recommendation.is_deleted == False
@@ -66,13 +81,22 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
             db_recommendation = Recommendation(
                 content_id=r_id,
                 content_type="Recommendation",
-                missions=[],
+                missions=list(linked_missions),
                 objective=[],
                 hapa=[],
                 comb=[],
                 intervention_type=[],
             )
             db.add(db_recommendation)
+        else:
+            # Update missions field if new mission(s) not present
+            updated = False
+            for m_id in linked_missions:
+                if m_id not in existing.missions:
+                    existing.missions.append(m_id)
+                    updated = True
+            if updated:
+                db.add(existing)
 
     # Handle new users
     for user_id, user_data in updates.new_users.items():
