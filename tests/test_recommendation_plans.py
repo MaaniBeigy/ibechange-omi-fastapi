@@ -50,19 +50,21 @@ def client():
 
 
 @pytest.fixture
-def setup_selected_content():
-    with Session(engine) as session:
-        content = SelectedContent(
-            user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
-            contents=[
+def setup_selected_content(client):
+    payload = {
+        "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
+            "contents": [
                 {"id": "NRc30", "type": "recommendation", "mission_id": "NM31"},
                 {"id": "NRc54", "type": "recommendation", "mission_id": "NM31"},
             ],
-            mission_start_time=datetime.now(timezone.utc),
-            mission_end_time=datetime.now(timezone.utc) + timedelta(days=1),
-        )
-        session.add(content)
-        session.commit()
+            "mission_start_time": datetime.now(timezone.utc).isoformat(),
+            "mission_end_time": (
+                datetime.now(timezone.utc) + timedelta(days=1)
+            ).isoformat(),
+        }
+    }
+    response = client.post("/selected_contents/", json=payload)
+    assert response.status_code == 200
 
 
 def test_get_recommendation_plans(client, setup_selected_content):

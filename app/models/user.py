@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import ForeignKey
 from sqlmodel import JSON, Field, SQLModel
 
 
@@ -25,7 +26,7 @@ class UserFeedback(SQLModel, table=True):
     __tablename__ = "UserFeedback"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(index=True)
+    user_id: uuid.UUID = Field(index=True, foreign_key="User.user_id")
     events: List[Dict] = Field(sa_type=JSON)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
@@ -37,7 +38,7 @@ class HealthHabitAssessment(SQLModel, table=True):
     __tablename__ = "HealthHabitAssessment"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(index=True)
+    user_id: uuid.UUID = Field(index=True, foreign_key="User.user_id")
     hhs: Dict = Field(sa_type=JSON)
     assessment_timestamp: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -50,9 +51,9 @@ class MissionContent(SQLModel, table=True):
     __tablename__ = "MissionContent"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(index=True)
+    user_id: uuid.UUID = Field(index=True, foreign_key="User.user_id")
     selection_timestamp: Optional[datetime] = Field(default=None)
-    mission_id: str = Field(index=True)
+    mission_id: str = Field(index=True, foreign_key="Mission.mission_id")
     mission_start_time: Optional[datetime] = Field(default=None)
     mission_end_time: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
