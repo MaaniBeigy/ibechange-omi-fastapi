@@ -64,11 +64,11 @@ def get_recommendation_plans(
 
     new_plans = []
     for content in selected_contents:
-        # Extract content_id strings from list of dicts in SelectedContent
-        content_ids = [c["id"] for c in content.contents]
+        # Extract content_id -> mission_id mapping from list of dicts in SelectedContent
+        content_missions = {c["id"]: c["mission_id"] for c in content.contents}
         # Generate recommendation plans for each user/content
         plans = generate_recommendation_plan(
-            content.user_id, content_ids, start_dt, end_dt, db
+            content.user_id, content_missions, start_dt, end_dt, db
         )
         new_plans.extend(plans)
 

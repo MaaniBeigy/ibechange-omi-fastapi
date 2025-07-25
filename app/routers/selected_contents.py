@@ -57,13 +57,18 @@ def create_selected_contents(
                 db_recommendation = Recommendation(
                     content_id=c.id,
                     content_type=c.type,
-                    missions=[],
+                    missions=[c.mission_id],
                     objective=[],
                     hapa=[],
                     comb=[],
                     intervention_type=[]
                 )
                 db.add(db_recommendation)
+            else:
+                # Update missions field if mission_id not present
+                if c.mission_id not in existing_recommendation.missions:
+                    existing_recommendation.missions.append(c.mission_id)
+                    db.add(existing_recommendation)
             # Check/create Mission (non-deleted)
             existing_mission = db.exec(
                 select(Mission).where(
