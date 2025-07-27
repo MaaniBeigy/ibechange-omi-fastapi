@@ -143,13 +143,13 @@ def test_post_updates_inserts_user_and_escalation_and_disables_user(client):
         from uuid import UUID
 
         new_user_obj = session.exec(
-            select(User).where(User.user_id == UUID(new_user_id))
+            select(User).where(User.id == UUID(new_user_id))
         ).first()
         assert new_user_obj is not None
         assert new_user_obj.characteristics.get("gender") == "female"
 
         disabled_user_obj = session.exec(
-            select(User).where(User.user_id == UUID(disabled_user_id))
+            select(User).where(User.id == UUID(disabled_user_id))
         ).first()
         assert disabled_user_obj.is_deleted is True
         assert disabled_user_obj.deleted_at is not None

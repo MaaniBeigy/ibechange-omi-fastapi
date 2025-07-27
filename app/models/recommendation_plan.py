@@ -10,7 +10,7 @@ class RecommendationPlan(SQLModel, table=True):
     __tablename__ = "RecommendationPlan"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(index=True, foreign_key="User.user_id")
+    user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
     content_id: str
     mission_id: Optional[uuid.UUID] = Field(
         default=None, index=True, foreign_key="Mission.id"

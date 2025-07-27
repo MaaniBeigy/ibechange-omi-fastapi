@@ -30,7 +30,6 @@ class Mission {
 
 class User {
   -id: uuid
-  -user_id: uuid
   -created_at: datetime
   -characteristics: Dict[str, Any]
   -events: List[Dict[str, Any]]
