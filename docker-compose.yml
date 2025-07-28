@@ -37,6 +37,7 @@ services:
       - .env
     volumes:
       - .:/app
+      - ./htmlcov:/app/htmlcov
 
   metabase:
     image: metabase/metabase:latest
