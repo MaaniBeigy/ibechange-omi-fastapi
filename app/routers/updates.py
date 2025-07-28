@@ -307,9 +307,27 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
         # Handle escalation levels
         escalation_levels = getattr(updates, "escalation_level", {})
         for user_id, levels in escalation_levels.items():
+            user_uuid = UUID(user_id)
             for level_info in levels:
+                exists = db.exec(
+                    select(EscalationLevel).where(
+                        EscalationLevel.user_id == user_uuid,
+                        EscalationLevel.update_timestamp == level_info.update_timestamp,
+                        EscalationLevel.level == level_info.level,
+                        EscalationLevel.pillar_id == level_info.pillar_id,
+                        EscalationLevel.is_deleted == False,
+                    )
+                ).first()
+
+                if exists:
+                    logger.debug(
+                        "Skipped duplicate EscalationLevel for "
+                        + f"user {user_id} on {level_info.update_timestamp}"
+                    )
+                    continue
+
                 db_el = EscalationLevel(
-                    user_id=UUID(user_id),
+                    user_id=user_uuid,
                     update_timestamp=level_info.update_timestamp,
                     level=level_info.level,
                     pillar_id=level_info.pillar_id,
