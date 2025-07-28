@@ -138,6 +138,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         f"Updated Recommendation missions for content_id: {r_id}"
                     )
 
+        db.flush()
+        logger.debug("Flushed DB after inserting Missions and Recommendations")
         # Handle disabled users
         for user_id, disable_info in updates.disabled_users.items():
             user = db.exec(select(User).where(User.id == user_id)).first()
@@ -193,6 +195,9 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     logger.debug(
                         f"Added new Event for user {user_id} at {event_start_time}"
                     )
+
+        db.flush()
+        logger.debug("Flushed DB after inserting user feedback")
         # Handle health habit assessments
         for user_id, hha_list in updates.health_habit_assessments.items():
             user_uuid = UUID(user_id)
@@ -236,6 +241,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         f"Added new HealthHabitAssessment for user {user_id} at {assessment_ts}"
                     )
 
+        db.flush()
+        logger.debug("Flushed DB after inserting health habit assessments")
         # Handle new missions and contents
         for user_id, nmc in updates.new_missions_and_contents.items():
             for mission in nmc.new_missions:
@@ -246,12 +253,17 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     )
                 ).first()
                 if not mission_obj:
-                    continue
+                    raise ValueError(f"Mission {mission.mission} not found in DB.")
 
                 existing_mc = db.exec(
                     select(MissionContent).where(
                         MissionContent.user_id == UUID(user_id),
                         MissionContent.mission_id == mission_obj.id,
+                        MissionContent.selection_timestamp
+                        == mission.selection_timestamp,
+                        MissionContent.mission_start_time
+                        == mission.selection_timestamp,
+                        MissionContent.mission_end_time == mission.finish_timestamp,
                         MissionContent.is_deleted == False,
                     )
                 ).first()
@@ -276,18 +288,10 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         )
                 else:
                     # New mission content
-                    mission_obj = db.exec(
-                        select(Mission).where(
-                            Mission.mission_id == mission.mission,
-                            Mission.is_deleted == False,
-                        )
-                    ).first()
-                    mission_uuid = mission_obj.id if mission_obj else None
-
                     db_nmc = MissionContent(
                         user_id=UUID(user_id),
                         selection_timestamp=mission.selection_timestamp,
-                        mission_id=mission_uuid,
+                        mission_id=mission_obj.id,
                         mission_start_time=mission.selection_timestamp,
                         mission_end_time=mission.finish_timestamp,
                         created_at=datetime.now(timezone.utc),
@@ -298,6 +302,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         f"Created new MissionContent for user {user_id}, mission {mission.mission}"
                     )
 
+        db.flush()
+        logger.debug("Flushed DB after inserting new missions and contents")
         # Handle escalation levels
         escalation_levels = getattr(updates, "escalation_level", {})
         for user_id, levels in escalation_levels.items():
