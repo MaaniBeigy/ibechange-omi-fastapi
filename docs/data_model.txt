@@ -73,10 +73,9 @@ class Recommendation {
 class RecommendationPlan {
   -id: uuid
   -user_id: uuid
-  -recommendation_list: List[str]
+  -recommendation_id: uuid
   -mission_id: uuid
-  -mission_start_timestamp: datetime
-  -mission_end_timestamp: datetime
+  -scheduled_for: datetime
   --
   +init()
 }
@@ -109,9 +108,14 @@ class Event {
   -id: uuid
   -user_id: uuid
   -event_name: str
-  -start_timestamp: datetime
-  -end_timestamp: datetime
-  -characteristics: List[Dict[str, Any]]
+  -event_start_time: datetime
+  -event_end_time: datetime
+  -characteristics: Dict[str, Any]
+  -process_id: Optional[int]
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
   --
   +init()
 }
@@ -192,13 +196,7 @@ class SelectedContent {
 }
 
 class UserFeedback {
-  -id: uuid
-  -user_id: uuid
-  -events: List[Dict]
-  -created_at: datetime
-  -modified_at: datetime
-  -deleted_at: datetime
-  -is_deleted: bool
+  -events: List[Event]
   --
   +init()
 }
@@ -220,7 +218,7 @@ class MissionContent {
   -id: uuid
   -user_id: uuid
   -selection_timestamp: datetime
-  -mission_id: str
+  -mission_id: uuid
   -mission_start_time: datetime
   -mission_end_time: datetime
   -created_at: datetime
@@ -268,5 +266,6 @@ NotificationEnvironment "1" --> "*" Reward : calculates
 SelectedContent "*" --> "1" User : assigned to
 HealthHabitAssessment "*" --> "1" User : belongs to
 MissionContent "1" --> "1" Mission : belongs to
+UserFeedback "1" --> "*" Event : generates
 
 @enduml
