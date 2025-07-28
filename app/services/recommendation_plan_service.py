@@ -1,15 +1,15 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from dotenv import load_dotenv
-from sqlmodel import Session
 from sqlalchemy import select
+from sqlmodel import Session
 
+from app.models.mission import Mission
 from app.models.recommendation_plan import RecommendationPlan
 from app.utils.scheduling import generate_random_schedule
-from app.models.mission import Mission
 
 load_dotenv()
 
@@ -24,28 +24,101 @@ def generate_recommendation_plan(
     mode = os.getenv("MODE", "test")
     plans = []
 
-    if mode == "test":
-        schedules = generate_random_schedule(start_time, end_time)
-        for (content_id, mission_id_str), scheduled_time in zip(
-            content_missions.items(), schedules
-        ):
-            # Look up Mission by mission_id (string)
-            mission_obj = db.exec(
+    if mode != "test":
+        return plans  # Production logic not implemented
+
+    # Load constraints
+    min_per_day = int(os.getenv("MIN_NOTIFICATIONS_PER_DAY", 1))
+    max_per_day = int(os.getenv("MAX_NOTIFICATIONS_PER_DAY", 5))
+    min_per_week = int(os.getenv("MIN_NOTIFICATIONS_PER_WEEK", 5))
+    max_per_week = int(os.getenv("MAX_NOTIFICATIONS_PER_WEEK", 20))
+    cooldown_minutes = int(os.getenv("BETWEEN_NOTIFICATION_COOLDOWN", 180))
+
+    now = datetime.now(timezone.utc)
+
+    # ----------------------------- Check cooldown window -----------------------------
+    cooldown_cutoff = now - timedelta(minutes=cooldown_minutes)
+    recent_plan = db.exec(
+        select(RecommendationPlan)
+        .where(RecommendationPlan.user_id == user_id)
+        .where(RecommendationPlan.scheduled_for >= cooldown_cutoff)
+        .where(RecommendationPlan.scheduled_for <= now)
+        .where(RecommendationPlan.is_deleted == False)
+    ).first()
+    if recent_plan:
+        # Skip if the last recommendation is too recent
+        return []
+
+    # ----------------------- Fetch existing plans in the window ----------------------
+    existing_plans = db.exec(
+        select(RecommendationPlan)
+        .where(RecommendationPlan.user_id == user_id)
+        .where(RecommendationPlan.scheduled_for >= start_time)
+        .where(RecommendationPlan.scheduled_for <= end_time)
+        .where(RecommendationPlan.is_deleted == False)
+    ).all()
+
+    existing_schedule = [p.scheduled_for for p in existing_plans]
+    existing_by_day = {}
+    for t in existing_schedule:
+        day = t.date()
+        existing_by_day.setdefault(day, 0)
+        existing_by_day[day] += 1
+
+    total_existing = len(existing_schedule)
+    total_days = (end_time.date() - start_time.date()).days + 1
+    total_needed = max(min_per_week, min(max_per_week, max_per_day * total_days))
+    remaining = max(0, total_needed - total_existing)
+
+    if remaining == 0:
+        return []
+
+    # --------------------------- Generate fresh candidates ---------------------------
+    cooldown_delta = timedelta(minutes=cooldown_minutes)
+    all_schedules = generate_random_schedule(start_time, end_time)
+    new_schedules = []
+    scheduled_times = set(existing_schedule)  # existing times in window
+
+    for scheduled_time in all_schedules:
+        # Check cooldown against existing + already scheduled
+        too_close = any(
+            abs((scheduled_time - t).total_seconds()) < cooldown_delta.total_seconds()
+            for t in scheduled_times
+        )
+        if too_close:
+            continue
+
+        day = scheduled_time.date()
+        if existing_by_day.get(day, 0) < max_per_day:
+            new_schedules.append(scheduled_time)
+            scheduled_times.add(scheduled_time)
+            existing_by_day[day] = existing_by_day.get(day, 0) + 1
+
+        if len(new_schedules) >= remaining:
+            break
+
+    # -------------------------------- Assign schedules -------------------------------
+    for (content_id, mission_id_str), scheduled_time in zip(
+        content_missions.items(), new_schedules
+    ):
+        mission_obj = (
+            db.exec(
                 select(Mission).where(
-                    Mission.mission_id == mission_id_str, Mission.is_deleted == False
+                    Mission.mission_id == mission_id_str,
+                    Mission.is_deleted == False,
                 )
-            ).scalars().first()
-            mission_uuid = mission_obj.id if mission_obj else None
-            plan = RecommendationPlan(
-                user_id=user_id,
-                content_id=content_id,
-                mission_id=mission_uuid,
-                scheduled_for=scheduled_time,
             )
-            db.add(plan)
-            plans.append(plan)
-    else:
-        # TODO: Implement production mode scheduling logic
-        pass
+            .scalars()
+            .first()
+        )
+        mission_uuid = mission_obj.id if mission_obj else None
+        plan = RecommendationPlan(
+            user_id=user_id,
+            content_id=content_id,
+            mission_id=mission_uuid,
+            scheduled_for=scheduled_time,
+        )
+        db.add(plan)
+        plans.append(plan)
 
     return plans
