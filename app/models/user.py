@@ -21,18 +21,6 @@ class User(SQLModel, table=True):
         self.deleted_at = date_disabled
 
 
-class UserFeedback(SQLModel, table=True):
-    __tablename__ = "UserFeedback"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
-    events: List[Dict] = Field(sa_type=JSON)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    modified_at: Optional[datetime] = Field(default=None)
-    deleted_at: Optional[datetime] = Field(default=None)
-    is_deleted: bool = Field(default=False)
-
-
 class HealthHabitAssessment(SQLModel, table=True):
     __tablename__ = "HealthHabitAssessment"
 

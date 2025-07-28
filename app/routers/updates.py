@@ -5,13 +5,16 @@ from typing import Dict, Set
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import and_, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
 from app.models.escalation_level import EscalationLevel
+from app.models.event import Event
 from app.models.mission import Mission
 from app.models.recommendation import Recommendation
-from app.models.user import HealthHabitAssessment, MissionContent, User, UserFeedback
+from app.models.user import HealthHabitAssessment, MissionContent, User
 from app.schemas.update import UpdateCreate
 
 router = APIRouter(prefix="/updates", tags=["Updates"])
@@ -149,15 +152,47 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
 
         # Handle user feedback
         for user_id, feedback in updates.user_feedback.items():
-            db_feedback = UserFeedback(
-                user_id=UUID(user_id),
-                events=[json.loads(e.model_dump_json()) for e in feedback.events],
-                created_at=datetime.now(timezone.utc),
-                is_deleted=False,
-            )
-            db.add(db_feedback)
-            logger.debug(f"Added UserFeedback for user {user_id}")
+            for e in feedback.events:
+                event_start_time = e.timestamp
+                props_json = json.loads(json.dumps(e.properties, sort_keys=True))
+                user_uuid = UUID(user_id)
 
+                # Check for existing event with same user, name, and start time
+                existing_event = db.exec(
+                    select(Event).where(
+                        Event.user_id == user_uuid,
+                        Event.event_name == e.event_name,
+                        Event.event_start_time == event_start_time,
+                        Event.is_deleted == False,
+                    )
+                ).first()
+
+                if existing_event:
+                    # If characteristics differ, update them
+                    if existing_event.characteristics != props_json:
+                        existing_event.characteristics = props_json
+                        existing_event.modified_at = datetime.now(timezone.utc)
+                        db.add(existing_event)
+                        logger.debug(
+                            f"Updated Event for user {user_id} at {event_start_time}"
+                        )
+                    else:
+                        logger.debug(
+                            f"Skipped duplicate Event for user {user_id} at {event_start_time}"
+                        )
+                else:
+                    db_event = Event(
+                        user_id=user_uuid,
+                        process_id=e.process_id,
+                        event_name=e.event_name,
+                        event_start_time=event_start_time,
+                        event_end_time=getattr(e, "end_timestamp", event_start_time),
+                        characteristics=props_json,
+                    )
+                    db.add(db_event)
+                    logger.debug(
+                        f"Added new Event for user {user_id} at {event_start_time}"
+                    )
         # Handle health habit assessments
         for user_id, hha in updates.health_habit_assessments.items():
             for assessment in hha:
