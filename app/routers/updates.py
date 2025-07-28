@@ -53,32 +53,28 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
         db.flush()
         logger.debug("All users created and flushed")
 
-        # Collect mission_ids and recommendation_ids
-        mission_ids = set()
-        recommendation_ids = set()
-        for feedback in updates.user_feedback.values():
-            for event in feedback.events:
-                props = event.properties
-                if isinstance(props, dict):
-                    mission_id = props.get("mission_id")
-                    content_id = props.get("content_id")
-                    if mission_id:
-                        mission_ids.add(mission_id)
-                    if content_id:
-                        recommendation_ids.add(content_id)
+        # ------------------------ COLLECT AND INSERT MISSIONS ------------------------
+        mission_ids: Set[str] = set()
+
+        # From new_missions_and_contents
         for nmc in updates.new_missions_and_contents.values():
             for mission in nmc.new_missions:
                 if hasattr(mission, "mission"):
                     mission_ids.add(mission.mission)
-                if hasattr(mission, "recommendations"):
-                    for rec_id in mission.recommendations:
-                        recommendation_ids.add(rec_id)
+
+        # From user_feedback (event.properties.mission_id)
+        for feedback in updates.user_feedback.values():
+            for event in feedback.events:
+                props = event.properties
+                if isinstance(props, dict) and "mission_id" in props:
+                    mission_ids.add(props["mission_id"])
 
         # Insert missing Missions
         for m_id in mission_ids:
             existing = db.exec(
                 select(Mission).where(
-                    Mission.mission_id == m_id, Mission.is_deleted == False
+                    Mission.mission_id == m_id,
+                    Mission.is_deleted == False,
                 )
             ).first()
             if not existing:
@@ -90,33 +86,58 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                 db.add(db_mission)
                 logger.debug(f"Created new Mission with mission_id: {m_id}")
 
-        # Insert missing Recommendations
-        for r_id in recommendation_ids:
-            linked_missions = set()
-            for nmc in updates.new_missions_and_contents.values():
-                for mission in nmc.new_missions:
-                    if hasattr(mission, "recommendations") and r_id in getattr(
-                        mission, "recommendations", []
-                    ):
-                        if hasattr(mission, "mission"):
-                            linked_missions.add(mission.mission)
-            for feedback in updates.user_feedback.values():
-                for event in feedback.events:
-                    props = event.properties
-                    if isinstance(props, dict):
-                        if props.get("content_id") == r_id and props.get("mission_id"):
-                            linked_missions.add(props["mission_id"])
+        db.flush()
+
+        # --------------- COLLECT AND INSERT RECOMMENDATIONS + RESOURCES --------------
+        content_id_type_map: Dict[str, str] = {}  # Maps content_id → content_type
+        mission_content_links: Dict[str, Set[str]] = {}  # Maps content_id → mission_ids
+
+        # From new_missions_and_contents
+        for nmc in updates.new_missions_and_contents.values():
+            for mission in nmc.new_missions:
+                mission_id = getattr(mission, "mission", None)
+                if mission_id:
+                    for rec_id in getattr(mission, "recommendations", []):
+                        content_id_type_map[rec_id] = "recommendation"
+                        mission_content_links.setdefault(rec_id, set()).add(mission_id)
+                    for res_id in getattr(mission, "resources", []):
+                        content_id_type_map[res_id] = "resource"
+                        mission_content_links.setdefault(res_id, set()).add(mission_id)
+
+        # From user_feedback
+        for feedback in updates.user_feedback.values():
+            for event in feedback.events:
+                props = event.properties
+                if isinstance(props, dict):
+                    content_id = props.get("content_id")
+                    content_type = props.get(
+                        "content_type"
+                    )  # "recommendation" or "resource"
+                    mission_id = props.get("mission_id")
+
+                    if content_id and content_type:
+                        content_id_type_map[content_id] = content_type
+                        if mission_id:
+                            mission_content_links.setdefault(content_id, set()).add(
+                                mission_id
+                            )
+
+        # Insert missing Recommendations and Resources
+        for content_id, content_type in content_id_type_map.items():
             existing = db.exec(
                 select(Recommendation).where(
-                    Recommendation.content_id == r_id,
+                    Recommendation.content_id == content_id,
                     Recommendation.is_deleted == False,
                 )
             ).first()
+
+            linked_missions = list(mission_content_links.get(content_id, []))
+
             if not existing:
-                db_recommendation = Recommendation(
-                    content_id=r_id,
-                    content_type="Recommendation",
-                    missions=list(linked_missions),
+                db_rec = Recommendation(
+                    content_id=content_id,
+                    content_type=content_type.capitalize(),
+                    missions=linked_missions,
                     objective=[],
                     hapa=[],
                     comb=[],
@@ -124,8 +145,10 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     created_at=datetime.now(timezone.utc),
                     is_deleted=False,
                 )
-                db.add(db_recommendation)
-                logger.debug(f"Created new Recommendation for content_id: {r_id}")
+                db.add(db_rec)
+                logger.debug(
+                    f"Created new {content_type} with content_id: {content_id}"
+                )
             else:
                 updated = False
                 for m_id in linked_missions:
@@ -135,11 +158,15 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                 if updated:
                     db.add(existing)
                     logger.debug(
-                        f"Updated Recommendation missions for content_id: {r_id}"
+                        "Updated missions for existing "
+                        + f"{content_type} with content_id: {content_id}"
                     )
 
         db.flush()
-        logger.debug("Flushed DB after inserting Missions and Recommendations")
+        logger.debug(
+            "Flushed DB after inserting Missions, Recommendations, and Resources"
+        )
+
         # Handle disabled users
         for user_id, disable_info in updates.disabled_users.items():
             user = db.exec(select(User).where(User.id == user_id)).first()
@@ -180,7 +207,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         )
                     else:
                         logger.debug(
-                            f"Skipped duplicate Event for user {user_id} at {event_start_time}"
+                            "Skipped duplicate Event for user "
+                            + f"{user_id} at {event_start_time}"
                         )
                 else:
                     db_event = Event(
@@ -221,11 +249,13 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         existing.modified_at = datetime.now(timezone.utc)
                         db.add(existing)
                         logger.debug(
-                            f"Updated HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                            "Updated HealthHabitAssessment for "
+                            + f"user {user_id} at {assessment_ts}"
                         )
                     else:
                         logger.debug(
-                            f"Skipped duplicate HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                            "Skipped duplicate HealthHabitAssessment for "
+                            + f"user {user_id} at {assessment_ts}"
                         )
                 else:
                     # New assessment
@@ -238,7 +268,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     )
                     db.add(db_hha)
                     logger.debug(
-                        f"Added new HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                        "Added new HealthHabitAssessment for "
+                        + f"user {user_id} at {assessment_ts}"
                     )
 
         db.flush()
@@ -280,11 +311,13 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         existing_mc.modified_at = datetime.now(timezone.utc)
                         db.add(existing_mc)
                         logger.debug(
-                            f"Updated MissionContent for user {user_id}, mission {mission.mission}"
+                            "Updated MissionContent for user "
+                            + f"{user_id}, mission {mission.mission}"
                         )
                     else:
                         logger.debug(
-                            f"Skipped duplicate MissionContent for user {user_id}, mission {mission.mission}"
+                            "Skipped duplicate MissionContent for "
+                            + f"user {user_id}, mission {mission.mission}"
                         )
                 else:
                     # New mission content
@@ -299,7 +332,8 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     )
                     db.add(db_nmc)
                     logger.debug(
-                        f"Created new MissionContent for user {user_id}, mission {mission.mission}"
+                        "Created new MissionContent for user "
+                        + f"{user_id}, mission {mission.mission}"
                     )
 
         db.flush()
