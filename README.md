@@ -5,8 +5,10 @@ Opportune Moment Identification (OMI) of Behavior Change Recommendations (iBeCha
 ## Deploy
 
 ```bash
+docker volume create metabase_data
 docker compose up --build -d
 docker compose exec app pytest -v
+docker compose exec app pytest --cov=app --cov-report=html -v
 docker compose logs app
 docker compose down
 ```
@@ -60,19 +62,16 @@ curl "http://localhost:3200/recommendation_plans/?start_time=2025-07-07T08:00:00
 curl -X POST "http://localhost:3200/updates/" -H "Content-Type: application/json" -d '{
     "new_users": {
       "33333333-3333-3333-3333-333333333333": {
-        "user_id": "33333333-3333-3333-3333-333333333333",
-        "characteristics": {
-          "gender": "female",
-          "height": 165,
-          "userAge": 30,
-          "weight": 60,
-          "wearable": "yes",
-          "residence": "TestCity",
-          "enrolmentDate": "2025-07-16",
-          "informedConsent": "signed",
-          "recruitmentCenter": "TEST",
-          "level": 0
-        }
+        "gender": "female",
+        "height": 165,
+        "userAge": 30,
+        "weight": 60,
+        "wearable": "yes",
+        "residence": "TestCity",
+        "enrolmentDate": "2025-07-16",
+        "informedConsent": "signed",
+        "recruitmentCenter": "TEST",
+        "level": 0
       }
     },
     "user_feedback": {
@@ -131,4 +130,10 @@ curl -X POST "http://localhost:3200/updates/" -H "Content-Type: application/json
       ]
     }
   }'
+```
+
+```bash
+curl -X POST "http://localhost:3200/updates/" \
+     -H "Content-Type: application/json" \
+     --data-binary @docs/example_updates_mini.json
 ```
