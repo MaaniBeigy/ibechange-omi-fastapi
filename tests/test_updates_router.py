@@ -11,7 +11,11 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app.dependencies import get_db
 from app.main import app
 from app.models.escalation_level import EscalationLevel
-from app.models.user import User
+from app.models.event import Event
+from app.models.mission import Mission
+from app.models.recommendation import Recommendation
+from app.models.user import MissionContent, User
+from tests.constants import updates_example
 
 load_dotenv()
 
@@ -157,3 +161,33 @@ def test_post_updates_inserts_user_and_escalation_and_disables_user(client):
         assert len(levels) == 1
         assert levels[0].pillar_id == "EO"
         assert levels[0].level == 1
+
+
+def count_table_rows(session: Session):
+    return {
+        "missions": session.exec(select(Mission)).all().__len__(),
+        "recommendations": session.exec(select(Recommendation)).all().__len__(),
+        "events": session.exec(select(Event)).all().__len__(),
+        "escalation_levels": session.exec(select(EscalationLevel)).all().__len__(),
+        "mission_contents": session.exec(select(MissionContent)).all().__len__(),
+        "users": session.exec(select(User)).all().__len__(),
+    }
+
+
+def test_post_updates_idempotency(client):
+    # First POST
+    response1 = client.post("/updates", json=updates_example)
+    assert response1.status_code == 200
+
+    with Session(engine) as session:
+        counts_after_first = count_table_rows(session)
+
+    # Second POST (same data)
+    response2 = client.post("/updates", json=updates_example)
+    assert response2.status_code == 200
+
+    with Session(engine) as session:
+        counts_after_second = count_table_rows(session)
+
+    # Assert no new rows were added
+    assert counts_after_first == counts_after_second
