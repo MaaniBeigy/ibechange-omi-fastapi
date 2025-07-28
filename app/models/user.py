@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import JSON, Field, SQLModel
 
 
@@ -23,12 +24,15 @@ class User(SQLModel, table=True):
 
 class HealthHabitAssessment(SQLModel, table=True):
     __tablename__ = "HealthHabitAssessment"
+    __table_args__ = (Index("ix_user_timestamp", "user_id", "assessment_timestamp"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
-    hhs: Dict = Field(sa_type=JSON)
+    hhs: Dict = Field(sa_type=JSONB)
     assessment_timestamp: Optional[datetime] = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(datetime.timezone.utc)
+    )
     modified_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
     is_deleted: bool = Field(default=False)

@@ -194,17 +194,47 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         f"Added new Event for user {user_id} at {event_start_time}"
                     )
         # Handle health habit assessments
-        for user_id, hha in updates.health_habit_assessments.items():
-            for assessment in hha:
-                db_hha = HealthHabitAssessment(
-                    user_id=UUID(user_id),
-                    hhs=assessment.hhs,
-                    assessment_timestamp=assessment.assessment_timestamp,
-                    created_at=datetime.now(timezone.utc),
-                    is_deleted=False,
-                )
-                db.add(db_hha)
-                logger.debug(f"Added HealthHabitAssessment for user {user_id}")
+        for user_id, hha_list in updates.health_habit_assessments.items():
+            user_uuid = UUID(user_id)
+            for assessment in hha_list:
+                assessment_ts = assessment.assessment_timestamp
+                hhs_dict = json.loads(json.dumps(assessment.hhs, sort_keys=True))
+
+                # Look for an existing assessment with the same timestamp
+                existing = db.exec(
+                    select(HealthHabitAssessment).where(
+                        HealthHabitAssessment.user_id == user_uuid,
+                        HealthHabitAssessment.assessment_timestamp == assessment_ts,
+                        HealthHabitAssessment.is_deleted == False,
+                    )
+                ).first()
+
+                if existing:
+                    # If the hhs differs, update
+                    if existing.hhs != hhs_dict:
+                        existing.hhs = hhs_dict
+                        existing.modified_at = datetime.now(timezone.utc)
+                        db.add(existing)
+                        logger.debug(
+                            f"Updated HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                        )
+                    else:
+                        logger.debug(
+                            f"Skipped duplicate HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                        )
+                else:
+                    # New assessment
+                    db_hha = HealthHabitAssessment(
+                        user_id=user_uuid,
+                        hhs=hhs_dict,
+                        assessment_timestamp=assessment_ts,
+                        created_at=datetime.now(timezone.utc),
+                        is_deleted=False,
+                    )
+                    db.add(db_hha)
+                    logger.debug(
+                        f"Added new HealthHabitAssessment for user {user_id} at {assessment_ts}"
+                    )
 
         # Handle new missions and contents
         for user_id, nmc in updates.new_missions_and_contents.items():
