@@ -174,10 +174,19 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
         # Handle new missions and contents
         for user_id, nmc in updates.new_missions_and_contents.items():
             for mission in nmc.new_missions:
+                mission_obj = db.exec(
+                    select(Mission).where(
+                        Mission.mission_id == mission.mission,
+                        Mission.is_deleted == False,
+                    )
+                ).first()
+                if not mission_obj:
+                    continue
+
                 existing_mc = db.exec(
                     select(MissionContent).where(
                         MissionContent.user_id == UUID(user_id),
-                        MissionContent.mission_id == mission.mission,
+                        MissionContent.mission_id == mission_obj.id,
                         MissionContent.is_deleted == False,
                     )
                 ).first()
@@ -202,10 +211,18 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         )
                 else:
                     # New mission content
+                    mission_obj = db.exec(
+                        select(Mission).where(
+                            Mission.mission_id == mission.mission,
+                            Mission.is_deleted == False,
+                        )
+                    ).first()
+                    mission_uuid = mission_obj.id if mission_obj else None
+
                     db_nmc = MissionContent(
                         user_id=UUID(user_id),
                         selection_timestamp=mission.selection_timestamp,
-                        mission_id=mission.mission,
+                        mission_id=mission_uuid,
                         mission_start_time=mission.selection_timestamp,
                         mission_end_time=mission.finish_timestamp,
                         created_at=datetime.now(timezone.utc),
