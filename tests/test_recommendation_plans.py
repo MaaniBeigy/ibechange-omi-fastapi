@@ -9,6 +9,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.dependencies import get_db
 from app.main import app
+from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
 from app.models.selected_content import SelectedContent
 
@@ -95,14 +96,24 @@ def test_get_existing_recommendation_plans(client, setup_selected_content):
         .isoformat()
     )
     with Session(engine) as session:
+        # Insert recommendation first
+        recommendation = Recommendation(
+            content_id="ARc5",
+            content_type="recommendation",
+            missions=[],
+            objective=[],
+            hapa=[],
+            comb=[],
+            intervention_type=[],
+        )
+        session.add(recommendation)
+        session.commit()
+
+        # Now insert the plan using the recommendation_id
         plan = RecommendationPlan(
             user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
-            content_id="ARc5",
-            scheduled_for=(
-                (datetime.now(timezone.utc) + timedelta(hours=1))
-                .replace(tzinfo=None)
-                .isoformat()
-            ),
+            recommendation_id=recommendation.id,
+            scheduled_for=datetime.now(timezone.utc) + timedelta(hours=1),
         )
         session.add(plan)
         session.commit()

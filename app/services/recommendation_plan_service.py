@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -8,10 +9,14 @@ from sqlalchemy import select
 from sqlmodel import Session
 
 from app.models.mission import Mission
+from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
 from app.utils.scheduling import generate_random_schedule
 
 load_dotenv()
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def generate_recommendation_plan(
@@ -98,9 +103,23 @@ def generate_recommendation_plan(
             break
 
     # -------------------------------- Assign schedules -------------------------------
+    recommendation_lookup = {
+        r.content_id: r.id
+        for r in db.exec(
+            select(Recommendation).where(Recommendation.is_deleted == False)
+        )
+        .scalars()
+        .all()
+    }
+
     for (content_id, mission_id_str), scheduled_time in zip(
         content_missions.items(), new_schedules
     ):
+        recommendation_uuid = recommendation_lookup.get(content_id)
+        if not recommendation_uuid:
+            logger.warning(f"Skipping plan for unknown content_id: {content_id}")
+            continue
+
         mission_obj = (
             db.exec(
                 select(Mission).where(
@@ -112,9 +131,10 @@ def generate_recommendation_plan(
             .first()
         )
         mission_uuid = mission_obj.id if mission_obj else None
+
         plan = RecommendationPlan(
             user_id=user_id,
-            content_id=content_id,
+            recommendation_id=recommendation_uuid,
             mission_id=mission_uuid,
             scheduled_for=scheduled_time,
         )
