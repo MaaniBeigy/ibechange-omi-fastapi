@@ -136,7 +136,7 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
             if not existing:
                 db_rec = Recommendation(
                     content_id=content_id,
-                    content_type=content_type.capitalize(),
+                    content_type=content_type.lower(),
                     missions=linked_missions,
                     objective=[],
                     hapa=[],

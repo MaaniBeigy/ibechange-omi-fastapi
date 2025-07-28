@@ -97,7 +97,7 @@ def create_selected_contents(
                 if not existing_recommendation:
                     db_recommendation = Recommendation(
                         content_id=c.id,
-                        content_type=c.type,
+                        content_type=c.type.lower(),
                         missions=[c.mission_id],
                         objective=[],
                         hapa=[],
