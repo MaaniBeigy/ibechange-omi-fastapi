@@ -57,7 +57,7 @@ def test_post_updates_inserts_user_and_escalation_and_disables_user(client):
     # pre-insert a user to be disabled
     with Session(engine) as session:
         u = User(
-            user_id=disabled_user_id,
+            id=disabled_user_id,
             characteristics={"gender": "male"},
             is_deleted=False,
         )
@@ -83,19 +83,16 @@ def test_post_updates_inserts_user_and_escalation_and_disables_user(client):
         },
         "new_users": {
             new_user_id: {
-                "user_id": new_user_id,
-                "characteristics": {
-                    "gender": "female",
-                    "height": 165,
-                    "userAge": 30,
-                    "weight": 60,
-                    "wearable": "yes",
-                    "residence": "TestCity",
-                    "enrolmentDate": "2025-07-16",
-                    "informedConsent": "signed",
-                    "recruitmentCenter": "TEST",
-                    "level": 0,
-                },
+                "gender": "female",
+                "height": 165,
+                "userAge": 30,
+                "weight": 60,
+                "wearable": "yes",
+                "residence": "TestCity",
+                "enrolmentDate": "2025-07-16",
+                "informedConsent": "signed",
+                "recruitmentCenter": "TEST",
+                "level": 0,
             }
         },
         "disabled_users": {

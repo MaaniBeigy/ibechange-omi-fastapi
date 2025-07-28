@@ -17,8 +17,20 @@ class UserFeedback(BaseModel):
 
 
 class NewUser(BaseModel):
-    user_id: UUID
-    characteristics: Dict[str, Any]
+    gender: Optional[str] = None
+    height: Optional[int] = None
+    userAge: Optional[int] = None
+    weight: Optional[int] = None
+    wearable: Optional[str] = None
+    residence: Optional[str] = None
+    enrolmentDate: Optional[str] = None
+    informedConsent: Optional[str] = None
+    recruitmentCenter: Optional[str] = None
+    level: Optional[int] = None
+    voiceRecording: Optional[str] = None
+    education: Optional[str] = None
+    digitalLiteracy: Optional[str] = None
+    occupation: Optional[str] = None
 
 
 class HealthHabitAssessment(BaseModel):
@@ -32,7 +44,8 @@ class NewMission(BaseModel):
     resources: List[str]
     prescribed: bool
     selection_timestamp: datetime
-    finish_timestamp: datetime
+    finish_timestamp: Optional[datetime] = None
+
 
 class MissionContent(BaseModel):
     update_timestamp: datetime

@@ -39,7 +39,7 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                 logger.debug(f"Creating new user with user_id: {user_id}")
                 # Access characteristics directly from NewUser object or use empty dict
                 new_user = updates.new_users.get(user_id)
-                characteristics = new_user.characteristics if new_user else {}
+                characteristics = new_user.model_dump() if new_user else {}
                 db_user = User(
                     id=UUID(user_id),
                     characteristics=characteristics,
