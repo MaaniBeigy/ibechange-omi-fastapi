@@ -65,10 +65,6 @@ def generate_recommendation_plan(
 
     existing_schedule = [p.scheduled_for for p in existing_plans]
     existing_by_day = {}
-    for t in existing_schedule:
-        day = t.date()
-        existing_by_day.setdefault(day, 0)
-        existing_by_day[day] += 1
 
     total_existing = len(existing_schedule)
     total_days = (end_time.date() - start_time.date()).days + 1
@@ -116,9 +112,6 @@ def generate_recommendation_plan(
         content_missions.items(), new_schedules
     ):
         recommendation_uuid = recommendation_lookup.get(content_id)
-        if not recommendation_uuid:
-            logger.warning(f"Skipping plan for unknown content_id: {content_id}")
-            continue
 
         mission_obj = (
             db.exec(
