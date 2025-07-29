@@ -56,11 +56,25 @@ def create_selected_contents(
                     unique_contents_dict[c.id] = c
             unique_contents = list(unique_contents_dict.values())
 
+            def _naive_utc(dt: datetime | None) -> datetime | None:
+                """Strip tzinfo after converting to UTC so DB / JSON timestamps match."""
+                if dt is None:
+                    return None
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+            def _canonical_contents(raw: list[dict]) -> list[dict]:
+                """Sort by content_id so order differences don’t matter."""
+                return sorted(raw, key=lambda x: x["id"])
+
+            incoming_contents = [c.model_dump() for c in unique_contents]
+            canonical_incoming = _canonical_contents(incoming_contents)
+            start_naive = _naive_utc(content.mission_start_time)
+            end_naive = _naive_utc(content.mission_end_time)
             # Check if SelectedContent with same contents and times already exists
             already_exists = any(
-                sc.contents == [c.model_dump() for c in unique_contents]
-                and sc.mission_start_time == content.mission_start_time
-                and sc.mission_end_time == content.mission_end_time
+                _canonical_contents(sc.contents) == canonical_incoming
+                and _naive_utc(sc.mission_start_time) == start_naive
+                and _naive_utc(sc.mission_end_time) == end_naive
                 and not sc.is_deleted
                 for sc in user_contents
             )
@@ -111,8 +125,10 @@ def create_selected_contents(
                 else:
                     # Update missions field if mission_id not present
                     if c.mission_id not in existing_recommendation.missions:
-                        existing_recommendation.missions.append(c.mission_id)
-                        db.add(existing_recommendation)
+                        # reassignment so SQLAlchemy notices the change
+                        existing_recommendation.missions = (
+                            existing_recommendation.missions + [c.mission_id]
+                        )
                         logger.debug(
                             f"Updated Recommendation missions for content_id: {c.id}"
                         )
