@@ -452,3 +452,54 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
     scheduled_for_set = set(p["scheduled_for"] for p in plans)
     assert schedule_times[0].replace(tzinfo=None).isoformat() in scheduled_for_set
     assert schedule_times[1].replace(tzinfo=None).isoformat() in scheduled_for_set
+
+
+def test_recommendation_plans_invalid_datetime_format(client):
+    """Router should return 422 when start_time or end_time is not ISO‐8601."""
+    resp = client.get(
+        "/recommendation_plans/?start_time=not-a-date&end_time=2025-07-29T10:00:00"
+    )
+    assert resp.status_code == 422
+    assert resp.json() == {"detail": "Invalid datetime format"}
+
+
+def test_recommendation_plan_skips_when_mode_not_test(client, monkeypatch):
+    """Branch: MODE ≠ 'test' → service returns [] and router responds with empty list."""
+    monkeypatch.setenv("MODE", "prod")  # trigger the early‑return branch
+
+    user_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+
+    # minimal DB setup so the router will attempt generation
+    with Session(engine) as session:
+        session.add(User(id=user_id, created_at=now, is_deleted=False))
+        rec = Recommendation(
+            content_id="RC_PROD",
+            content_type="recommendation",
+            missions=["MC_PROD"],
+            objective=[],
+            hapa=[],
+            comb=[],
+            intervention_type=[],
+        )
+        session.add_all([rec, Mission(mission_id="MC_PROD")])
+        session.commit()
+        session.add(
+            SelectedContent(
+                user_id=user_id,
+                contents=[
+                    {"id": "RC_PROD", "type": "recommendation", "mission_id": "MC_PROD"}
+                ],
+                created_at=now,
+            )
+        )
+        session.commit()
+
+    start_iso = now.replace(tzinfo=None).isoformat()
+    end_iso = (now + timedelta(hours=1)).replace(tzinfo=None).isoformat()
+    resp = client.get(
+        f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}"
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"recommendation_plans": []}
