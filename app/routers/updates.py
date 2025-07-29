@@ -278,8 +278,6 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         Mission.is_deleted == False,
                     )
                 ).first()
-                if not mission_obj:
-                    raise ValueError(f"Mission {mission.mission} not found in DB.")
 
                 existing_mc = db.exec(
                     select(MissionContent).where(
