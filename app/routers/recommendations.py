@@ -13,8 +13,6 @@ def create_recommendations(
     recommendations: RecommendationList, db: Session = Depends(get_db)
 ):
     for rec in recommendations.recommendations:
-        if not hasattr(rec, 'content_type') or rec.content_type is None:
-            raise HTTPException(status_code=400, detail="content_type is required for each recommendation.")
         existing_rec = db.exec(
             select(Recommendation).where(Recommendation.content_id == rec.content_id)
         ).first()
