@@ -335,3 +335,76 @@ def test_update_health_habit_assessment_hhs(client):
         # Both keys/values should be present
         assert assessment.hhs == updated_hhs
         assert assessment.modified_at is not None
+
+
+def test_updates_mission_content_timestamps(client):
+    from uuid import uuid4, UUID
+
+    user_id = str(uuid4())
+    mission_id = "MISSION1"
+    t1 = datetime(2025, 7, 28, 12, 0, tzinfo=timezone.utc)
+    t2 = datetime(2025, 7, 29, 12, 0, tzinfo=timezone.utc)
+    t3 = datetime(2025, 8, 1, 12, 0, tzinfo=timezone.utc)
+
+    # Pre-insert user and mission
+    with Session(engine) as session:
+        u = User(id=user_id, characteristics={}, is_deleted=False)
+        m = Mission(mission_id=mission_id, is_deleted=False)
+        session.add(u)
+        session.add(m)
+        session.commit()
+        # Insert initial MissionContent
+        mc = MissionContent(
+            user_id=UUID(user_id),
+            mission_id=m.id,
+            selection_timestamp=t1,
+            mission_start_time=t1,
+            mission_end_time=t2,
+            is_deleted=False,
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add(mc)
+        session.commit()
+
+    # Now POST an update with new timestamps (should update existing MissionContent)
+    payload = {
+        "user_feedback": {},
+        "new_users": {},
+        "disabled_users": {},
+        "health_habit_assessments": {},
+        "new_missions_and_contents": {
+            user_id: {
+                "update_timestamp": datetime.now(timezone.utc).isoformat(),
+                "new_missions": [
+                    {
+                        "mission": mission_id,
+                        "recommendations": [],
+                        "resources": [],
+                        "prescribed": False,
+                        "selection_timestamp": t3.isoformat(),
+                        "finish_timestamp": t3.isoformat(),
+                    }
+                ],
+            }
+        },
+        "escalation_level": {},
+    }
+    resp = client.post("/updates", json=payload)
+    assert resp.status_code == 200
+
+    # Check that the timestamps were updated
+    with Session(engine) as session:
+        m_obj = session.exec(
+            select(Mission).where(Mission.mission_id == mission_id)
+        ).first()
+        mc = session.exec(
+            select(MissionContent).where(
+                MissionContent.user_id == UUID(user_id),
+                MissionContent.mission_id == m_obj.id,
+                MissionContent.is_deleted == False,
+            )
+        ).first()
+        assert mc is not None
+        assert mc.selection_timestamp.replace(tzinfo=timezone.utc) == t3
+        assert mc.mission_start_time.replace(tzinfo=timezone.utc) == t3
+        assert mc.mission_end_time.replace(tzinfo=timezone.utc) == t3

@@ -269,8 +269,15 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
 
         db.flush()
         logger.debug("Flushed DB after inserting health habit assessments")
+
         # Handle new missions and contents
+        processed_user_mission = {}
+
         for user_id, nmc in updates.new_missions_and_contents.items():
+            # sort by selection_timestamp (oldest first)
+            sorted_missions = sorted(
+                nmc.new_missions, key=lambda m: m.selection_timestamp
+            )
             for mission in nmc.new_missions:
                 mission_obj = db.exec(
                     select(Mission).where(
@@ -279,24 +286,29 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     )
                 ).first()
 
-                existing_mc = db.exec(
-                    select(MissionContent).where(
-                        MissionContent.user_id == UUID(user_id),
-                        MissionContent.mission_id == mission_obj.id,
-                        MissionContent.selection_timestamp
-                        == mission.selection_timestamp,
-                        MissionContent.mission_start_time
-                        == mission.selection_timestamp,
-                        MissionContent.mission_end_time == mission.finish_timestamp,
-                        MissionContent.is_deleted == False,
-                    )
-                ).first()
+                user_mission_key = (user_id, mission_obj.id)
+
+                # Check if this user/mission combo is already processed in this batch
+                if user_mission_key in processed_user_mission:
+                    existing_mc = processed_user_mission[user_mission_key]
+                else:
+                    existing_mc = db.exec(
+                        select(MissionContent).where(
+                            MissionContent.user_id == UUID(user_id),
+                            MissionContent.mission_id == mission_obj.id,
+                            MissionContent.is_deleted == False,
+                        )
+                    ).first()
+                    if existing_mc:
+                        processed_user_mission[user_mission_key] = existing_mc
 
                 if existing_mc:
                     # Only update if timestamps have changed
                     if (
                         existing_mc.mission_start_time != mission.selection_timestamp
                         or existing_mc.mission_end_time != mission.finish_timestamp
+                        or existing_mc.selection_timestamp
+                        != mission.selection_timestamp
                     ):
                         existing_mc.selection_timestamp = mission.selection_timestamp
                         existing_mc.mission_start_time = mission.selection_timestamp
@@ -324,6 +336,7 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                         is_deleted=False,
                     )
                     db.add(db_nmc)
+                    processed_user_mission[user_mission_key] = db_nmc
                     logger.debug(
                         "Created new MissionContent for user "
                         + f"{user_id}, mission {mission.mission}"

@@ -40,6 +40,7 @@ class HealthHabitAssessment(SQLModel, table=True):
 
 class MissionContent(SQLModel, table=True):
     __tablename__ = "MissionContent"
+    __table_args__ = (Index("ix_user_mission", "user_id", "mission_id", unique=True),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
