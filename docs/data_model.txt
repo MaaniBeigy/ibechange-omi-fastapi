@@ -19,7 +19,7 @@ class SimulationClock {
 class Mission {
   -id: uuid
   -mission_id: str
-  -weekly_frequency: int
+  -weekly_frequency: Optional[int]
   -created_at: datetime
   -modified_at: datetime
   -deleted_at: datetime
@@ -32,6 +32,11 @@ class User {
   -id: uuid
   -created_at: datetime
   -characteristics: Dict[str, Any]
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   -events: List[Dict[str, Any]]
   -context: List[Dict[str, Any]]
   -timezone: Optional[str]
@@ -76,6 +81,10 @@ class RecommendationPlan {
   -recommendation_id: uuid
   -mission_id: uuid
   -scheduled_for: datetime
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
   --
   +init()
 }
@@ -116,6 +125,7 @@ class Event {
   -modified_at: datetime
   -deleted_at: datetime
   -is_deleted: bool
+  -is_virtual: bool
   --
   +init()
 }
@@ -136,6 +146,11 @@ class Context {
   -user_id: uuid
   -clock_time: datetime
   -context: Dict[str, Any]
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   --
   +init()
 }
@@ -144,8 +159,12 @@ class Context {
 class Motivation {
   -id: uuid
   -user_id: uuid
-  -created_at: datetime
   -value: float
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   --
   +init()
 }
@@ -153,8 +172,12 @@ class Motivation {
 class MemoryAccessibility {
   -id: uuid
   -user_id: uuid
-  -created_at: datetime
   -value: float
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   --
   +init()
 }
@@ -162,9 +185,13 @@ class MemoryAccessibility {
 class Reward {
   -id: uuid
   -user_id: uuid
-  -created_at: datetime
   -state: Dict[str, Any]
   -reward: float
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   --
   +init()
 }
@@ -173,6 +200,11 @@ class NotificationEnvironment {
   -id: uuid
   -user_id: uuid
   -model_id: uuid
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
+  -is_virtual: bool
   --
   +getContentList(): List[Dict[str, Any]]
   +getState()
