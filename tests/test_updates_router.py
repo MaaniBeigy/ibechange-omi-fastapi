@@ -14,7 +14,7 @@ from app.models.escalation_level import EscalationLevel
 from app.models.event import Event
 from app.models.mission import Mission
 from app.models.recommendation import Recommendation
-from app.models.user import MissionContent, User
+from app.models.user import HealthHabitAssessment, MissionContent, User
 from tests.constants import updates_example
 
 load_dotenv()
@@ -273,3 +273,65 @@ def test_recommendation_mission_update(client):
         assert rec is not None
         # Order of missions may vary
         assert set(rec.missions) == {mission_id1, mission_id2}
+
+
+def test_update_health_habit_assessment_hhs(client):
+    from uuid import UUID, uuid4
+
+    user_id = str(uuid4())
+    assessment_time = datetime.now(timezone.utc).replace(microsecond=0)
+    initial_hhs = {"smoking": 10.0}
+    updated_hhs = {"smoking": 5.0, "exercise": 2.0}
+
+    # Pre-insert the user and initial HealthHabitAssessment
+    with Session(engine) as session:
+        u = User(
+            id=user_id,
+            characteristics={"gender": "other"},
+            is_deleted=False,
+        )
+        session.add(u)
+        session.commit()
+        hha = HealthHabitAssessment(
+            user_id=UUID(user_id),
+            hhs=initial_hhs,
+            assessment_timestamp=assessment_time,
+            is_deleted=False,
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add(hha)
+        session.commit()
+
+    # POST update with a different hhs (should trigger the update branch)
+    payload = {
+        "user_feedback": {},
+        "new_users": {},
+        "disabled_users": {},
+        "health_habit_assessments": {
+            user_id: [
+                {
+                    "hhs": updated_hhs,
+                    "assessment_timestamp": assessment_time.isoformat(),
+                }
+            ]
+        },
+        "new_missions_and_contents": {},
+        "escalation_level": {},
+    }
+
+    resp = client.post("/updates", json=payload)
+    assert resp.status_code == 200
+
+    # Verify the hhs has been updated, and modified_at is set
+    with Session(engine) as session:
+        assessment = session.exec(
+            select(HealthHabitAssessment).where(
+                HealthHabitAssessment.user_id == UUID(user_id),
+                HealthHabitAssessment.assessment_timestamp == assessment_time,
+                HealthHabitAssessment.is_deleted == False,
+            )
+        ).first()
+        assert assessment is not None
+        # Both keys/values should be present
+        assert assessment.hhs == updated_hhs
+        assert assessment.modified_at is not None
