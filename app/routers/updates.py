@@ -171,13 +171,9 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
             user = db.exec(select(User).where(User.id == user_id)).first()
             if user:
                 date_disabled = disable_info.get("date_disabled")
-                if date_disabled:
-                    if isinstance(date_disabled, str):
-                        date_disabled = datetime.fromisoformat(date_disabled)
-                    user.deleteUser(date_disabled)
-                    db.add(user)
-                    logger.debug(f"Disabled user {user_id}")
-
+                user.deleteUser(date_disabled)
+                db.add(user)
+                logger.debug(f"Disabled user {user_id}")
         # Handle user feedback
         for user_id, feedback in updates.user_feedback.items():
             for e in feedback.events:
