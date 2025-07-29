@@ -150,12 +150,11 @@ def create_updates(updates: UpdateCreate, db: Session = Depends(get_db)):
                     f"Created new {content_type} with content_id: {content_id}"
                 )
             else:
-                updated = False
-                for m_id in linked_missions:
-                    if m_id not in existing.missions:
-                        existing.missions.append(m_id)
-                        updated = True
-                if updated:
+                to_add = [
+                    m_id for m_id in linked_missions if m_id not in existing.missions
+                ]
+                if to_add:
+                    existing.missions = existing.missions + to_add
                     db.add(existing)
                     logger.debug(
                         "Updated missions for existing "

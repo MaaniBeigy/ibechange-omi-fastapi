@@ -191,3 +191,85 @@ def test_post_updates_idempotency(client):
 
     # Assert no new rows were added
     assert counts_after_first == counts_after_second
+
+
+def test_recommendation_mission_update(client):
+    from uuid import UUID, uuid4
+
+    user_id = str(uuid4())
+    rec_id = "RC1"
+    mission_id1 = "M1"
+    mission_id2 = "M2"
+
+    # 1. Initial payload: Recommendation linked to mission_id1
+    payload1 = {
+        "user_feedback": {},
+        "new_users": {user_id: {"gender": "other"}},
+        "disabled_users": {},
+        "health_habit_assessments": {},
+        "new_missions_and_contents": {
+            user_id: {
+                "update_timestamp": datetime.now(timezone.utc).isoformat(),
+                "new_missions": [
+                    {
+                        "mission": mission_id1,
+                        "recommendations": [rec_id],
+                        "resources": [],
+                        "prescribed": False,
+                        "selection_timestamp": datetime.now(timezone.utc).isoformat(),
+                        "finish_timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                ],
+            }
+        },
+        "escalation_level": {},
+    }
+
+    # First POST
+    r1 = client.post("/updates", json=payload1)
+    assert r1.status_code == 200
+
+    # Check that Recommendation has only mission_id1
+    with Session(engine) as session:
+        rec = session.exec(
+            select(Recommendation).where(Recommendation.content_id == rec_id)
+        ).first()
+        assert rec is not None
+        assert sorted(rec.missions) == [mission_id1]
+
+    # 2. Second payload: Add new mission_id2 linked to the same Recommendation
+    payload2 = {
+        "user_feedback": {},
+        "new_users": {},  # User already exists
+        "disabled_users": {},
+        "health_habit_assessments": {},
+        "new_missions_and_contents": {
+            user_id: {
+                "update_timestamp": datetime.now(timezone.utc).isoformat(),
+                "new_missions": [
+                    {
+                        "mission": mission_id2,
+                        "recommendations": [rec_id],
+                        "resources": [],
+                        "prescribed": False,
+                        "selection_timestamp": datetime.now(timezone.utc).isoformat(),
+                        "finish_timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                ],
+            }
+        },
+        "escalation_level": {},
+    }
+
+    # Second POST
+    r2 = client.post("/updates", json=payload2)
+    assert r2.status_code == 200
+
+    # Check that Recommendation now has both mission IDs
+    with Session(engine) as session:
+        rec = session.exec(
+            select(Recommendation).where(Recommendation.content_id == rec_id)
+        ).first()
+        assert rec is not None
+        # Order of missions may vary
+        assert set(rec.missions) == {mission_id1, mission_id2}
