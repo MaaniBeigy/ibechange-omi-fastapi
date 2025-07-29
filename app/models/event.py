@@ -20,3 +20,4 @@ class Event(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
     is_deleted: bool = Field(default=False)
+    is_virtual: bool = Field(default=False)

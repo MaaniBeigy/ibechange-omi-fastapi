@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     modified_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
     is_deleted: bool = Field(default=False)
+    is_virtual: bool = Field(default=False)
 
     def deleteUser(self, date_disabled: datetime):
         self.is_deleted = True
