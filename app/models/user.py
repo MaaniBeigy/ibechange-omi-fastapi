@@ -23,6 +23,18 @@ class User(SQLModel, table=True):
         self.deleted_at = date_disabled
 
 
+class UserPersona(SQLModel, table=True):
+    __tablename__ = "UserPersona"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
+    persona_id: uuid.UUID = Field(index=True, foreign_key="Persona.id")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    modified_at: Optional[datetime] = Field(default=None)
+    deleted_at: Optional[datetime] = Field(default=None)
+    is_deleted: bool = Field(default=False)
+
+
 class HealthHabitAssessment(SQLModel, table=True):
     __tablename__ = "HealthHabitAssessment"
     __table_args__ = (Index("ix_user_timestamp", "user_id", "assessment_timestamp"),)
