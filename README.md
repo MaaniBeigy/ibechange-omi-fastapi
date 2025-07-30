@@ -1,5 +1,14 @@
+[![alt text](docs/IBC-logo.jpg)](https://ibechange.eu/)
+![alt text](docs/eu.png)
+
 # ibechange-omi-fastapi
 
+[![License: CC-BY-4.0-International](https://img.shields.io/badge/License-CC%20BY%204.0-blue.svg)](LICENSE)
+[![coverage report](docs/coverage.svg)](.logs/coverage.txt)
+
+# Data model
+
+![data-model](docs/data_model.svg)
 Opportune Moment Identification (OMI) of Behavior Change Recommendations (iBeChange-2025)
 
 ## Deploy
@@ -9,6 +18,7 @@ docker volume create metabase_data
 docker compose up --build -d
 docker compose exec app pytest -v
 docker compose exec app pytest --cov=app --cov-report=html -v
+docker compose exec app pytest --cov-report term --cov app tests/ > .logs/coverage.txt
 docker compose logs app
 docker compose down
 ```
