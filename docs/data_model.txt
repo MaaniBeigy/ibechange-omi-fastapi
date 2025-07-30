@@ -40,7 +40,6 @@ class User {
   -events: List[Dict[str, Any]]
   -context: List[Dict[str, Any]]
   -timezone: Optional[str]
-  -persona_id: uuid
   -motivation: List[Dict[str, float]]
   -memory_accessibility: List[Dict[str, float]]
   --
@@ -94,6 +93,18 @@ class Persona {
   -name: str
   -characteristics: Dict[str, Any]
   -models: List[uuid]
+  --
+  +init()
+}
+
+class UserPersona {
+  -id: uuid
+  -user_id: uuid
+  -persona_id: uuid
+  -created_at: datetime
+  -modified_at: datetime
+  -deleted_at: datetime
+  -is_deleted: bool
   --
   +init()
 }
@@ -277,7 +288,8 @@ class EscalationLevel {
 
 SimulationClock "1" --> "*" User : activates
 SimulationClock "1" --> "*"  NotificationEnvironment : triggers
-User "*" --> "1" Persona : belongs to
+User "*" --> "1" UserPersona : is linked to
+UserPersona "1" --> "1" Persona : belongs to
 User "1" --> "*" Event : generates
 Event "1" --> "1" EventName : contains
 User "1" --> "*" Context : updates
