@@ -65,6 +65,7 @@ def setup_selected_content(client):
             "mission_end_time": (
                 datetime.now(timezone.utc) + timedelta(days=1)
             ).isoformat(),
+            "plan_id": "1b1a1f51-701a-1ab0-afe0-05f100441796",
         }
     }
     response = client.post("/selected_contents/", json=payload)
@@ -157,6 +158,7 @@ def test_recent_plan_in_cooldown_skips_generation(client):
                     {"id": "RC_SKIP", "type": "recommendation", "mission_id": "MC_SKIP"}
                 ],
                 created_at=now,
+                plan_id="6b5a6f66-701a-1ab0-afe0-05f100441766",
             )
         )
         # recent plan (10 min ago) triggers the cooldown logic
@@ -211,6 +213,7 @@ def test_generation_returns_empty_when_remaining_zero(client, monkeypatch):
                     {"id": "RC_ZERO", "type": "recommendation", "mission_id": "MC_ZERO"}
                 ],
                 created_at=now,
+                plan_id="6b5a6f36-701a-1ab0-afe0-05f100441733",
             )
         )
         session.commit()
@@ -280,6 +283,7 @@ def test_generation_respects_cooldown_and_break(client, monkeypatch):
                     {"id": "RC_B", "type": "recommendation", "mission_id": "MC_CDLN"},
                 ],
                 created_at=now,
+                plan_id="8b5a6f88-701a-1ab0-afe0-05f100441788",
             )
         )
         session.commit()
@@ -342,6 +346,7 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
             ],
             "mission_start_time": "2025-07-07T10:00:33.919000",
             "mission_end_time": "2025-07-14T10:00:33.919000",
+            "plan_id": "7b8a9f54-801a-4ab0-afe0-06f100441793",
         },
         "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
             "contents": [
@@ -357,6 +362,7 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
             ],
             "mission_start_time": "2025-07-07T10:00:33.919000",
             "mission_end_time": "2025-07-14T10:00:33.919000",
+            "plan_id": "3b8a9f54-701a-1ab0-afe0-05f100441796",
         },
     }
 
@@ -433,6 +439,7 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
                 {"id": "TST_LOOP2", "type": "recommendation", "mission_id": "MID_LOOP"},
             ],
             created_at=now,
+            plan_id="5b5a9f55-701a-1ab0-afe0-05f100441795",
         )
         session.add(selected)
         session.commit()
@@ -491,6 +498,7 @@ def test_recommendation_plan_skips_when_mode_not_test(client, monkeypatch):
                     {"id": "RC_PROD", "type": "recommendation", "mission_id": "MC_PROD"}
                 ],
                 created_at=now,
+                 plan_id="4b4a4f44-701a-1ab0-afe0-05f100444444",
             )
         )
         session.commit()
