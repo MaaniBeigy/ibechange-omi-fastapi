@@ -92,7 +92,7 @@ class Persona {
   -id: uuid
   -name: str
   -characteristics: Dict[str, Any]
-  -models: List[uuid]
+  -models:Optional[List[uuid]]
   --
   +init()
 }
