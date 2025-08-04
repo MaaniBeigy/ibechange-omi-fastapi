@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 def generate_recommendation_plan(
     user_id: uuid.UUID,
     content_missions: dict,
+    plan_id: uuid.UUID,
     start_time: datetime,
     end_time: datetime,
     db: Session,
@@ -127,6 +128,7 @@ def generate_recommendation_plan(
 
         plan = RecommendationPlan(
             user_id=user_id,
+            plan_id=plan_id,
             recommendation_id=recommendation_uuid,
             mission_id=mission_uuid,
             scheduled_for=scheduled_time,

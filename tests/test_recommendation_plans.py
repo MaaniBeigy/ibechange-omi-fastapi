@@ -116,6 +116,7 @@ def test_get_existing_recommendation_plans(client, setup_selected_content):
         # Now insert the plan using the recommendation_id
         plan = RecommendationPlan(
             user_id="10b58b39-9a4c-46ad-b98d-03dc28735e6b",
+            plan_id="1b1a1f51-701a-1ab0-afe0-05f100441796",
             recommendation_id=recommendation.id,
             scheduled_for=datetime.now(timezone.utc) + timedelta(hours=1),
         )
@@ -153,18 +154,19 @@ def test_recent_plan_in_cooldown_skips_generation(client):
         # selected content for the user
         session.add(
             SelectedContent(
+                id="6b5a6f66-701a-1ab0-afe0-05f100441766",
                 user_id=user_id,
                 contents=[
                     {"id": "RC_SKIP", "type": "recommendation", "mission_id": "MC_SKIP"}
                 ],
                 created_at=now,
-                plan_id="6b5a6f66-701a-1ab0-afe0-05f100441766",
             )
         )
         # recent plan (10 min ago) triggers the cooldown logic
         session.add(
             RecommendationPlan(
                 user_id=user_id,
+                plan_id="6b5a6f66-701a-1ab0-afe0-05f100441766",
                 recommendation_id=rec.id,
                 scheduled_for=now - timedelta(minutes=10),
             )
@@ -208,12 +210,12 @@ def test_generation_returns_empty_when_remaining_zero(client, monkeypatch):
 
         session.add(
             SelectedContent(
+                id="6b5a6f36-701a-1ab0-afe0-05f100441733",
                 user_id=user_id,
                 contents=[
                     {"id": "RC_ZERO", "type": "recommendation", "mission_id": "MC_ZERO"}
                 ],
                 created_at=now,
-                plan_id="6b5a6f36-701a-1ab0-afe0-05f100441733",
             )
         )
         session.commit()
@@ -277,13 +279,13 @@ def test_generation_respects_cooldown_and_break(client, monkeypatch):
 
         session.add(
             SelectedContent(
+                id="8b5a6f88-701a-1ab0-afe0-05f100441788",
                 user_id=user_id,
                 contents=[
                     {"id": "RC_A", "type": "recommendation", "mission_id": "MC_CDLN"},
                     {"id": "RC_B", "type": "recommendation", "mission_id": "MC_CDLN"},
                 ],
                 created_at=now,
-                plan_id="8b5a6f88-701a-1ab0-afe0-05f100441788",
             )
         )
         session.commit()
@@ -433,13 +435,13 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
 
         # Add selected content with two recommendations for the user
         selected = SelectedContent(
+            id="5b5a9f55-701a-1ab0-afe0-05f100441795",
             user_id=user_id,
             contents=[
                 {"id": "TST_LOOP1", "type": "recommendation", "mission_id": "MID_LOOP"},
                 {"id": "TST_LOOP2", "type": "recommendation", "mission_id": "MID_LOOP"},
             ],
             created_at=now,
-            plan_id="5b5a9f55-701a-1ab0-afe0-05f100441795",
         )
         session.add(selected)
         session.commit()
@@ -493,12 +495,12 @@ def test_recommendation_plan_skips_when_mode_not_test(client, monkeypatch):
         session.commit()
         session.add(
             SelectedContent(
+                id="4b4a4f44-701a-1ab0-afe0-05f100444444",
                 user_id=user_id,
                 contents=[
                     {"id": "RC_PROD", "type": "recommendation", "mission_id": "MC_PROD"}
                 ],
                 created_at=now,
-                 plan_id="4b4a4f44-701a-1ab0-afe0-05f100444444",
             )
         )
         session.commit()
