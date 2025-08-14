@@ -47,7 +47,8 @@ app.include_router(recommendations.router)
 app.include_router(missions.router)
 app.include_router(updates.router)
 app.include_router(selected_contents.router)
-app.include_router(recommendation_plans.router)
+app.include_router(recommendation_plans.router_recommendation_plans)
+app.include_router(recommendation_plans.router_notification_plans)
 
 
 @app.get("/")

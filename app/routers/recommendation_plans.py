@@ -1,23 +1,30 @@
 from datetime import datetime
+from typing import Dict, List, Tuple
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, join, select
 
 from app.dependencies import get_db
-from app.models.recommendation_plan import RecommendationPlan
+from app.models.mission import Mission
 from app.models.recommendation import Recommendation
+from app.models.recommendation_plan import RecommendationPlan
 from app.models.selected_content import SelectedContent
 from app.schemas.recommendation_plan import (
+    NotificationItem,
+    NotificationUserBucket,
     RecommendationPlanItem,
     RecommendationPlanList,
     RecommendationPlanResponse,
 )
 from app.services.recommendation_plan_service import generate_recommendation_plan
 
-router = APIRouter(prefix="/recommendation_plans", tags=["Recommendation Plans"])
+router_recommendation_plans = APIRouter(
+    prefix="/recommendation_plans", tags=["Recommendation Plans"]
+)
 
 
-@router.get("/", response_model=RecommendationPlanList)
+@router_recommendation_plans.get("/", response_model=RecommendationPlanList)
 def get_recommendation_plans(
     start_time: str = Query(...),
     end_time: str = Query(...),
@@ -105,3 +112,100 @@ def get_recommendation_plans(
         for user_id, items in user_plans.items()
     ]
     return RecommendationPlanList(recommendation_plans=response)
+
+
+router_notification_plans = APIRouter(
+    prefix="/notification_plans", tags=["Notification Plans"]
+)
+
+
+@router_notification_plans.get("/", response_model=Dict[UUID, NotificationUserBucket])
+def get_notification_plans(
+    start_time: str = Query(...),
+    end_time: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    # Parse datetimes
+    try:
+        start_dt = datetime.fromisoformat(start_time)
+        end_dt = datetime.fromisoformat(end_time)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid datetime format")
+
+    # Reuse recommendation_plans logic
+    rec_plan_list: RecommendationPlanList = get_recommendation_plans(
+        start_time=start_time, end_time=end_time, db=db
+    )
+
+    content_ids: List[str] = []
+    user_scheduled_plans: List[Tuple[UUID, UUID, datetime]] = []
+
+    for user_bucket in rec_plan_list.recommendation_plans:
+        for item in user_bucket.plans:
+            content_ids.append(item.content_id)
+            user_scheduled_plans.append(
+                (user_bucket.user_id, item.plan_id, item.scheduled_for)
+            )
+
+    content_type_map: Dict[str, str] = {}
+    if content_ids:
+        rows = db.exec(
+            select(Recommendation.content_id, Recommendation.content_type).where(
+                Recommendation.content_id.in_(set(content_ids))
+            )
+        ).all()
+        content_type_map = {cid: ctype for cid, ctype in rows}
+
+    mission_map: Dict[Tuple[UUID, UUID, datetime], str] = {}
+    if user_scheduled_plans:
+        rows = db.exec(
+            select(
+                RecommendationPlan.user_id,
+                RecommendationPlan.plan_id,
+                RecommendationPlan.scheduled_for,
+                Mission.mission_id,
+            )
+            .join(Mission, Mission.id == RecommendationPlan.mission_id)
+            .where(RecommendationPlan.scheduled_for >= start_dt)
+            .where(RecommendationPlan.scheduled_for <= end_dt)
+            .where(RecommendationPlan.is_deleted == False)
+        ).all()
+        mission_map = {(u, p, s): m for (u, p, s, m) in rows}
+
+    out: Dict[UUID, NotificationUserBucket] = {}
+
+    for user_bucket in rec_plan_list.recommendation_plans:
+        items: List[NotificationItem] = []
+        for plan_item in user_bucket.plans:
+            ctype = content_type_map.get(plan_item.content_id)
+            if ctype is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Missing content_type for content_id={plan_item.content_id}",
+                )
+
+            mission_code = mission_map.get(
+                (user_bucket.user_id, plan_item.plan_id, plan_item.scheduled_for)
+            )
+            if mission_code is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Missing mission_id for "
+                        f"user_id={user_bucket.user_id}, plan_id={plan_item.plan_id}, "
+                        f"scheduled_for={plan_item.scheduled_for.isoformat()}"
+                    ),
+                )
+
+            items.append(
+                NotificationItem(
+                    id=plan_item.content_id,
+                    send_timestamp=plan_item.scheduled_for,
+                    type=ctype,
+                    mission=mission_code,  # <-- string now
+                )
+            )
+
+        out[user_bucket.user_id] = NotificationUserBucket(contents=items)
+
+    return out

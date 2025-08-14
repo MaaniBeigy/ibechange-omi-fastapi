@@ -18,3 +18,14 @@ class RecommendationPlanResponse(BaseModel):
 
 class RecommendationPlanList(BaseModel):
     recommendation_plans: List[RecommendationPlanResponse]
+
+
+class NotificationItem(BaseModel):
+    id: str
+    send_timestamp: datetime
+    type: str
+    mission: str
+
+
+class NotificationUserBucket(BaseModel):
+    contents: List[NotificationItem]
