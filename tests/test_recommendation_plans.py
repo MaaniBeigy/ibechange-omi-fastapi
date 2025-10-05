@@ -53,6 +53,11 @@ def client():
     SQLModel.metadata.drop_all(engine)
 
 
+def _iso(dt: datetime) -> str:
+    # your endpoints expect naive ISO strings
+    return dt.replace(tzinfo=None).isoformat()
+
+
 @pytest.fixture
 def setup_selected_content(client):
     payload = {
@@ -513,3 +518,312 @@ def test_recommendation_plan_skips_when_mode_not_test(client, monkeypatch):
 
     assert resp.status_code == 200
     assert resp.json() == {"recommendation_plans": []}
+
+
+def test_no_duplicate_per_plan_and_content_across_hourly_windows(
+    client, setup_selected_content
+):
+    # First run: current hour
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    s1 = now.replace(tzinfo=None).isoformat()
+    e1 = (now + timedelta(hours=1)).replace(tzinfo=None).isoformat()
+    r1 = client.get(f"/recommendation_plans/?start_time={s1}&end_time={e1}")
+    assert r1.status_code == 200
+
+    # Second run: next hour
+    s2 = (now + timedelta(hours=1)).replace(tzinfo=None).isoformat()
+    e2 = (now + timedelta(hours=2)).replace(tzinfo=None).isoformat()
+    r2 = client.get(f"/recommendation_plans/?start_time={s2}&end_time={e2}")
+    assert r2.status_code == 200
+
+    # Assert uniqueness per (plan_id, recommendation_id)
+    with Session(engine) as s:
+        rows = s.exec(
+            select(RecommendationPlan.plan_id, RecommendationPlan.recommendation_id)
+        ).all()
+        assert len(rows) == len(
+            set(rows)
+        ), "Duplicate (plan_id, recommendation_id) found"
+
+
+def test_branch_no_new_schedules_returns_empty(client, monkeypatch):
+    """
+    Force generate_random_schedule() to return [] so the service returns [] via the
+    `if not new_schedules: return []` branch.
+    """
+    monkeypatch.setenv("BETWEEN_NOTIFICATION_COOLDOWN", "180")
+    # deterministic: zero candidates
+    monkeypatch.setattr(
+        "app.services.recommendation_plan_service.generate_random_schedule",
+        lambda start, end: [],
+    )
+
+    now = datetime.now(timezone.utc)
+    with Session(engine) as session:
+        user_id = uuid.uuid4()
+        session.add(User(id=user_id, created_at=now, is_deleted=False))
+        session.add_all(
+            [
+                Mission(mission_id="MS_NO_SCHED"),
+                Recommendation(
+                    content_id="RC_NO_SCHED",
+                    content_type="recommendation",
+                    missions=["MS_NO_SCHED"],
+                    objective=[],
+                    hapa=[],
+                    comb=[],
+                    intervention_type=[],
+                ),
+            ]
+        )
+        session.commit()
+        session.add(
+            SelectedContent(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                contents=[
+                    {
+                        "id": "RC_NO_SCHED",
+                        "type": "recommendation",
+                        "mission_id": "MS_NO_SCHED",
+                    }
+                ],
+                created_at=now,
+            )
+        )
+        session.commit()
+
+    start_iso = _iso(now)
+    end_iso = _iso(now + timedelta(hours=1))
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    assert r.status_code == 200
+    assert r.json() == {"recommendation_plans": []}
+
+
+# ---------------------------- Branch: if not content_items -> [] ----------------------------
+
+
+def test_branch_no_content_items_returns_empty(client, monkeypatch):
+    """
+    Make sure the plan already contains this recommendation (same plan_id) so
+    the per-(plan_id, content_id) filter empties content_items ->
+    `if not content_items: return []`.
+
+    Also ensure the existing plan is OUTSIDE the requested window so router
+    doesn't short-circuit by returning existing rows.
+    """
+    # return one candidate time; should be irrelevant because content_items will be empty
+    monkeypatch.setattr(
+        "app.services.recommendation_plan_service.generate_random_schedule",
+        lambda start, end: [start + timedelta(minutes=10)],
+    )
+
+    now = datetime.now(timezone.utc)
+    plan_id = uuid.uuid4()
+    with Session(engine) as session:
+        user_id = uuid.uuid4()
+        session.add(User(id=user_id, created_at=now, is_deleted=False))
+        mission = Mission(mission_id="MS_ALREADY_IN_PLAN")
+        rec = Recommendation(
+            content_id="RC_ALREADY_IN_PLAN",
+            content_type="recommendation",
+            missions=["MS_ALREADY_IN_PLAN"],
+            objective=[],
+            hapa=[],
+            comb=[],
+            intervention_type=[],
+        )
+        session.add_all([mission, rec])
+        session.commit()
+
+        # Selected content ties the plan to the content
+        session.add(
+            SelectedContent(
+                id=plan_id,
+                user_id=user_id,
+                contents=[
+                    {
+                        "id": "RC_ALREADY_IN_PLAN",
+                        "type": "recommendation",
+                        "mission_id": "MS_ALREADY_IN_PLAN",
+                    }
+                ],
+                created_at=now,
+            )
+        )
+        session.commit()
+
+        # Insert an existing recommendation instance for this (plan_id, rec_id) yesterday
+        session.add(
+            RecommendationPlan(
+                user_id=user_id,
+                plan_id=plan_id,
+                recommendation_id=rec.id,
+                mission_id=mission.id,
+                scheduled_for=now - timedelta(days=1),
+            )
+        )
+        session.commit()
+
+    # Ask for a window in the future (no existing rows in range), so service is invoked
+    start_iso = _iso(now + timedelta(hours=1))
+    end_iso = _iso(now + timedelta(hours=2))
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    # Generation should return [], since content_items is empty
+    assert r.status_code == 200
+    assert r.json() == {"recommendation_plans": []}
+
+
+# ---------------------------- Branch: if rec_uuid is None -> continue ----------------------------
+
+
+def test_branch_rec_uuid_none_skips(client, monkeypatch):
+    """
+    SelectedContent has a content_id that doesn't exist in Recommendation table.
+    The generator hits `rec_uuid is None: continue` and ends up producing no plans.
+    """
+    monkeypatch.setattr(
+        "app.services.recommendation_plan_service.generate_random_schedule",
+        lambda start, end: [
+            start + timedelta(minutes=5),
+            start + timedelta(minutes=30),
+        ],
+    )
+
+    now = datetime.now(timezone.utc)
+    with Session(engine) as session:
+        user_id = uuid.uuid4()
+        session.add(User(id=user_id, created_at=now, is_deleted=False))
+        # Mission exists; Recommendation for the content does NOT
+        session.add(Mission(mission_id="MS_MISSING_REC"))
+        session.commit()
+
+        session.add(
+            SelectedContent(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                contents=[
+                    {
+                        "id": "RC_DOES_NOT_EXIST",
+                        "type": "recommendation",
+                        "mission_id": "MS_MISSING_REC",
+                    }
+                ],
+                created_at=now,
+            )
+        )
+        session.commit()
+
+    start_iso = _iso(now)
+    end_iso = _iso(now + timedelta(hours=1))
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    # Service creates nothing (continues on missing rec), router returns empty
+    assert r.status_code == 200
+    assert r.json() == {"recommendation_plans": []}
+
+
+# --------------- Explicit: per (plan_id, content_id) stays unique across retries ---------------
+
+
+def test_per_plan_content_unique_across_same_and_future_windows(client, monkeypatch):
+    """
+    1) Plan once in the next hour for specific (plan_id, content_id) -> 1 row
+    2) Try the same hour again -> should not create an extra row (router returns existing)
+    3) Try two hours later -> generator runs, but content_items is empty because that
+       recommendation already exists for this plan_id -> no new rows
+    """
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    plan_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+
+    # deterministic schedule:
+    # - for any window, propose the first minute inside it
+    def fake_schedule(start, end):
+        return [start + timedelta(minutes=5)]
+
+    monkeypatch.setattr(
+        "app.services.recommendation_plan_service.generate_random_schedule",
+        fake_schedule,
+    )
+
+    with Session(engine) as session:
+        session.add(User(id=user_id, created_at=now, is_deleted=False))
+        mission = Mission(mission_id="MS_LOCK")
+        rec = Recommendation(
+            content_id="RC_LOCK",
+            content_type="recommendation",
+            missions=["MS_LOCK"],
+            objective=[],
+            hapa=[],
+            comb=[],
+            intervention_type=[],
+        )
+        session.add_all([mission, rec])
+        session.commit()
+
+        session.add(
+            SelectedContent(
+                id=plan_id,
+                user_id=user_id,
+                contents=[
+                    {"id": "RC_LOCK", "type": "recommendation", "mission_id": "MS_LOCK"}
+                ],
+                created_at=now,
+            )
+        )
+        session.commit()
+
+    # (1) First run for next hour
+    s1 = _iso(now)
+    e1 = _iso(now + timedelta(hours=1))
+    r1 = client.get(f"/recommendation_plans/?start_time={s1}&end_time={e1}")
+    assert r1.status_code == 200
+    d1 = r1.json()
+    # Exactly one user with one plan referencing RC_LOCK
+    assert len(d1["recommendation_plans"]) == 1
+    ublock = d1["recommendation_plans"][0]
+    assert str(user_id) == ublock["user_id"]
+    assert any(p["content_id"] == "RC_LOCK" for p in ublock["plans"])
+    assert len(ublock["plans"]) == 1
+
+    # Check DB row count = 1
+    with Session(engine) as session:
+        cnt1 = session.exec(
+            select(RecommendationPlan).where(
+                RecommendationPlan.user_id == user_id,
+                RecommendationPlan.plan_id == plan_id,
+            )
+        ).all()
+        assert len(cnt1) == 1
+
+    # (2) Try same window again -> should not add a second row (router returns existing)
+    r2 = client.get(f"/recommendation_plans/?start_time={s1}&end_time={e1}")
+    assert r2.status_code == 200
+    d2 = r2.json()
+    assert len(d2["recommendation_plans"]) == 1
+    assert len(d2["recommendation_plans"][0]["plans"]) == 1
+    with Session(engine) as session:
+        cnt2 = session.exec(
+            select(RecommendationPlan).where(
+                RecommendationPlan.user_id == user_id,
+                RecommendationPlan.plan_id == plan_id,
+            )
+        ).all()
+        assert len(cnt2) == 1  # still one row
+
+    # (3) Try *two hours later* -> generator runs (no existing in that window),
+    #     but per-(plan_id, content_id) filter empties content_items -> no new rows
+    s3 = _iso(now + timedelta(hours=2))
+    e3 = _iso(now + timedelta(hours=3))
+    r3 = client.get(f"/recommendation_plans/?start_time={s3}&end_time={e3}")
+    assert r3.status_code == 200
+    # Could be empty (no generation happened) or unrelated user buckets,
+    # but there must be no *additional* rows for our plan_id/user_id.
+    with Session(engine) as session:
+        cnt3 = session.exec(
+            select(RecommendationPlan).where(
+                RecommendationPlan.user_id == user_id,
+                RecommendationPlan.plan_id == plan_id,
+            )
+        ).all()
+        assert len(cnt3) == 1  # no duplicates added

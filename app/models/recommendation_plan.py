@@ -2,13 +2,16 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
 class RecommendationPlan(SQLModel, table=True):
     __tablename__ = "RecommendationPlan"
-
+    __table_args__ = (
+        UniqueConstraint("plan_id", "recommendation_id", name="uq_plan_recommendation"),
+    )
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
     plan_id: uuid.UUID = Field(index=True, foreign_key="SelectedContent.id")
