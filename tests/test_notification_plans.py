@@ -53,7 +53,6 @@ def client():
 
 @pytest.fixture
 def setup_selected_content(client):
-    # Matches your existing fixture pattern (creates the user & selected content)
     payload = {
         "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
             "contents": [
@@ -72,7 +71,6 @@ def setup_selected_content(client):
 
 
 def _iso(dt: datetime) -> str:
-    # your endpoints expect naive ISO strings
     return dt.replace(tzinfo=None).isoformat()
 
 

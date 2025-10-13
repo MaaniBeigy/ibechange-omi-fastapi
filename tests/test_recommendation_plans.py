@@ -54,7 +54,6 @@ def client():
 
 
 def _iso(dt: datetime) -> str:
-    # your endpoints expect naive ISO strings
     return dt.replace(tzinfo=None).isoformat()
 
 

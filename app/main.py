@@ -7,12 +7,12 @@ from sqlmodel import SQLModel, create_engine
 
 from app.routers import (
     missions,
+    physical_activity,
     recommendation_plans,
     recommendations,
     selected_contents,
     updates,
 )
-
 
 load_dotenv()
 
@@ -49,6 +49,7 @@ app.include_router(updates.router)
 app.include_router(selected_contents.router)
 app.include_router(recommendation_plans.router_recommendation_plans)
 app.include_router(recommendation_plans.router_notification_plans)
+app.include_router(physical_activity.router)
 
 
 @app.get("/")

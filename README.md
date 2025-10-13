@@ -156,3 +156,10 @@ curl -X POST "http://localhost:3200/updates/" \
      -H "Content-Type: application/json" \
      --data-binary @docs/example_updates_mini.json
 ```
+
+
+```bash
+curl -X POST "http://localhost:3200/physical_activity/" \
+     -H "Content-Type: application/json" \
+     --data-binary @docs/physical_activity_example.json
+```
