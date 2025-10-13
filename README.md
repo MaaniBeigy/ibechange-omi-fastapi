@@ -157,9 +157,18 @@ curl -X POST "http://localhost:3200/updates/" \
      --data-binary @docs/example_updates_mini.json
 ```
 
+### Physical Activity
 
 ```bash
 curl -X POST "http://localhost:3200/physical_activity/" \
      -H "Content-Type: application/json" \
      --data-binary @docs/physical_activity_example.json
+```
+
+### Emotional Wellbeing
+
+```bash
+curl -X POST "http://localhost:3200/emotional_wellbeing/" \
+     -H "Content-Type: application/json" \
+     --data-binary @docs/emotional_wellbeing_example.json
 ```

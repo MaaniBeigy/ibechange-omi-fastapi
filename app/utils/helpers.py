@@ -8,6 +8,35 @@ from sqlmodel import Session, select
 from app.models.event import Event
 from app.models.user import User
 
+NA_SENTINELS = {"N/A", "NA", "NaN", "", None}
+
+
+def _coerce_by_type(value, typ: str):
+    if value in NA_SENTINELS:
+        return None
+    if typ is None:
+        return value
+    t = typ.lower()
+    try:
+        if t in ("int", "integer"):
+            return int(value)
+        if t in ("float", "double", "number"):
+            return float(value)
+        # leave strings, booleans, etc. as-is
+        return value
+    except (ValueError, TypeError):
+        # if it can't be coerced, store as NULL to avoid bad casts downstream
+        return None
+
+
+def _combine_vars_row(vars_, row):
+    out = {}
+    for i in range(min(len(vars_), len(row))):
+        name = vars_[i].name
+        typ = getattr(vars_[i], "type", None)
+        out[name] = _coerce_by_type(row[i], typ)
+    return out
+
 
 def _to_naive_utc(dt: datetime) -> datetime:
     """Return a UTC-naive datetime (tzinfo=None) for stable storage/comparison."""

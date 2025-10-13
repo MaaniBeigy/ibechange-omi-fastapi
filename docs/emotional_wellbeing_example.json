@@ -1,0 +1,689 @@
+[
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-08-02T23:01:29.000000Z",
+    "end_date": "2025-08-06T11:57:27.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            17.875,
+            67.0,
+            43.44,
+            58.0,
+            18.0,
+            70.0,
+            "122112212211111111111111111111111111111111111111111111111121111121111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111131111111111111111211111111111111111111111111212111111111111111211111111111111111111111111111111111111111111112121111111111111111111111111111111111211111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111211111111111111111111112111111111111111111211111111111111131211111111111111111122111111111111112111121111111112111111111112111121111111111111111111111111111111111111111211111211111111211111111111111111211111111111112211111111111111111112211111111111111111221111111111111211111111111111111111111111111111211111211111111111111111111111111111111111111111111111111111111111111332234321221112222212221232312212222222232312",
+            119,
+            92,
+            36,
+            88,
+            167,
+            134,
+            "4422112211111111233333333333332214221111112223333333333222222222222223322322222214444",
+            "2025-08-03T01:01:29+02:00",
+            "2025-08-03T08:05:56+02:00",
+            8,
+            424,
+            388,
+            "long_sleep"
+          ],
+          [
+            17.875,
+            67.0,
+            43.44,
+            58.0,
+            18.0,
+            70.0,
+            "122112212211111111111111111111111111111111111111111111111121111121111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111131111111111111111211111111111111111111111111212111111111111111211111111111111111111111111111111111111111111112121111111111111111111111111111111111211111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111211111111111111111111112111111111111111111211111111111111131211111111111111111122111111111111112111121111111112111111111112111121111111111111111111111111111111111111111211111211111111211111111111111111211111111111112211111111111111111112211111111111111111221111111111111211111111111111111111111111111111211111211111111111111111111111111111111111111111111111111111111111111332234321221112222212221232312212222222232312",
+            119,
+            92,
+            36,
+            88,
+            167,
+            134,
+            "4422112211111111233333333333332214221111112223333333333222222222222223322322222214444",
+            "2025-08-03T01:01:29+02:00",
+            "2025-08-03T08:05:56+02:00",
+            8,
+            424,
+            388,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    }
+  },
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-08-22T21:49:26.000000Z",
+    "end_date": "2025-08-25T11:43:29.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            19.5,
+            75.5,
+            25.54,
+            69.0,
+            10.0,
+            53.0,
+            "122211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111122121121111111111111111111111111111211112111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111111111111111111111111111111111111111111111111111122321111111111111111111111111211111111111111111211111111111121111111111132111111111111111111111111111111111111111311111111111111111121111111111111112211111211111111111111111111111111111111111111111121211111111111112111111121111111111112111111211111121111111111121111111121111111111111111111111111111121233322344332221333111111111111111111111111111111111111111111111111111122111111111111111111111111111111111111111111111111111111111111111321111112111111112211111111111111121111111111111111111111111111111111111111111111111111211111111111111211111111111111111111111111111111112211111111111111111111111111111111111111111111111111121111111111113222211121212322222221",
+            126,
+            93,
+            34,
+            104,
+            223,
+            126,
+            "42211111111112333222211122211111233333322212222222222333333333442222222211142333333322222222222244",
+            "2025-08-22T23:49:26+02:00",
+            "2025-08-23T07:56:39+02:00",
+            4,
+            487,
+            454,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            20.875,
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
+            "N/A",
+            "132333221121211111111111111111122223212321111111111221",
+            12,
+            41,
+            16,
+            1,
+            10,
+            0,
+            "444224",
+            "2025-08-23T15:29:56+02:00",
+            "2025-08-23T15:56:57+02:00",
+            18,
+            27,
+            11,
+            "sleep"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-08-23T22:56:57.000000Z",
+    "end_date": "2025-08-25T11:45:10.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            18.5,
+            73.375,
+            33.08,
+            67.0,
+            15.0,
+            65.0,
+            "133111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111132121211112211111111111111111111111111122111111111211111111111112211111111111111111111112111111111111111111111111111111111111111111111111111111111111111112121111111111111111112211121111111111111222111111112221111111211111111111111111112121111111112211111112111112311111111122111111111111111111111111111111121111111111111111111111111111111111121111111111111111221111111111111121111111111112211111111111111111111111111111111111111111111111111111111111111111111111111221111211111111111111111111111111121111111111111111111111121111111112111111111111111111111111111221111233",
+            121,
+            96,
+            15,
+            75,
+            194,
+            70,
+            "42222111111112223222222211111122222233333333322222222222221112333332224",
+            "2025-08-24T00:56:57+02:00",
+            "2025-08-24T06:50:36+02:00",
+            4,
+            354,
+            339,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    }
+  },
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-08-24T21:50:31.000000Z",
+    "end_date": "2025-08-25T11:45:10.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            18.5,
+            71.75,
+            31.29,
+            64.0,
+            12.0,
+            68.0,
+            "122222222222231222322211111111111111111111111111111111111111111111111111111111111111111111111111111112221111111111111111111111111111111111111111111111111111111111111111111111111111111111231211112111111111111111111111111111111111111111111111111111111111111111111111111111111112222211111111111111211111121111111111111111111111111111111122111111111122111111111111112111111111111122111112111111111111111211111112111111111111111111111111111111111111111111111111111111111122211111112211112112211121111111111111111111111211111111111111111111111111111111111111132111111111111111221111111111112111111111111111111111111111111111111111111111111111111111111111111111111113213211111111111111111112111111111111111111111111111111111121111111111111111111111221111111111111111122111111122111111111111111111111111111111111111111111111111111111111111112111111111111121111111111111",
+            134,
+            95,
+            22,
+            80,
+            216,
+            112,
+            "44422111111222233332221111112222233333322222222222223333222222211122333333333222221222",
+            "2025-08-24T23:50:31+02:00",
+            "2025-08-25T07:00:33+02:00",
+            13,
+            430,
+            408,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    }
+  },
+
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-10-04T20:06:34.000000Z",
+    "end_date": "2025-10-05T05:31:21.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            17.75,
+            74.25,
+            35.0,
+            69.0,
+            84.0,
+            17.0,
+            61.0,
+            "1112121111111111111111111111112211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111111111111211211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111121111111111111111111112211111111121111112111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111111211111121111111111111111111111111111111111111111111111111111112121111111111211111111111211111111111111111111123243234134334322223333311111111111111122111111111111111221111111111111111111111111111111111111111111111111111111111111111111111112211111111111211111111111211111111111221111111211111111211111111111111111111111111111111111111111111111111111122111111111111111111111111112111111111112121111111111111111112111111111111111121111111111121211111111111111111112111111111112111111111111111111211111111111111111111111111111111111111111111111111111111111111111111111111111221111111112111111121111111111111112111111112221111112111111111111111111122111111111111111111111111111111",
+            160,
+            92,
+            43,
+            112,
+            272,
+            138,
+            "44442111122113332211221111122113333222211111222223333222244222222222233333222222222423333333322221111142233222333",
+            "2025-10-04T22:06:34+02:00",
+            "2025-10-05T07:31:21+02:00",
+            16,
+            565,
+            522,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    },
+    "dataid": "79e0896c-ce36-4ee4-b0e4-cfd0dba67219",
+    "day": "2025-10-05",
+    "analysiscompletedtime": ""
+  },
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-10-04T20:06:34.000000Z",
+    "end_date": "2025-10-05T05:31:21.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            17.75,
+            74.25,
+            35.0,
+            69.0,
+            84.0,
+            17.0,
+            61.0,
+            "1112121111111111111111111111112211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111111111111211211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111121111111111111111111112211111111121111112111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111111211111121111111111111111111111111111111111111111111111111111112121111111111211111111111211111111111111111111123243234134334322223333311111111111111122111111111111111221111111111111111111111111111111111111111111111111111111111111111111111112211111111111211111111111211111111111221111111211111111211111111111111111111111111111111111111111111111111111122111111111111111111111111112111111111112121111111111111111112111111111111111121111111111121211111111111111111112111111111112111111111111111111211111111111111111111111111111111111111111111111111111111111111111111111111111221111111112111111121111111111111112111111112221111112111111111111111111122111111111111111111111111111111",
+            160,
+            92,
+            43,
+            112,
+            272,
+            138,
+            "44442111122113332211221111122113333222211111222223333222244222222222233333222222222423333333322221111142233222333",
+            "2025-10-04T22:06:34+02:00",
+            "2025-10-05T07:31:21+02:00",
+            16,
+            565,
+            522,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    },
+    "dataid": "79e0896c-ce36-4ee4-b0e4-cfd0dba67219",
+    "day": "2025-10-05",
+    "analysiscompletedtime": ""
+  },
+  {
+    "user_uuid": "f93fc9a8-2fa1-4f5f-b15f-83bf9da4ce8a",
+    "pillar_id": "emotional_wellbeing",
+    "start_date": "2025-10-04T20:06:34.000000Z",
+    "end_date": "2025-10-05T05:31:21.000000Z",
+    "data": {
+      "singleindicator": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": [
+          [
+            17.75,
+            74.25,
+            35.0,
+            69.0,
+            84.0,
+            17.0,
+            61.0,
+            "1112121111111111111111111111112211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111111111111211211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111211111111111111111111121111111111111111111112211111111121111112111111111111111111111111111111111111111111111111111111111111111111111111111111112111111111111111111111211111121111111111111111111111111111111111111111111111111111112121111111111211111111111211111111111111111111123243234134334322223333311111111111111122111111111111111221111111111111111111111111111111111111111111111111111111111111111111111112211111111111211111111111211111111111221111111211111111211111111111111111111111111111111111111111111111111111122111111111111111111111111112111111111112121111111111111111112111111111111111121111111111121211111111111111111112111111111112111111111111111111211111111111111111111111111111111111111111111111111111111111111111111111111111221111111112111111121111111111111112111111112221111112111111111111111111122111111111111111111111111111111",
+            160,
+            92,
+            43,
+            112,
+            272,
+            138,
+            "44442111122113332211221111122113333222211111222223333222244222222222233333222222222423333333322221111142233222333",
+            "2025-10-04T22:06:34+02:00",
+            "2025-10-05T07:31:21+02:00",
+            16,
+            565,
+            522,
+            "long_sleep"
+          ]
+        ]
+      },
+      "multipleindicators": {
+        "vars": [
+          {
+            "name": "average_breath",
+            "type": "float",
+            "unit": "breath_per_minute"
+          },
+          { "name": "average_heart_rate", "type": "float", "unit": "bpm" },
+          { "name": "average_hrv", "type": "float", "unit": "ms" },
+          { "name": "lowest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "highest_heart_rate", "type": "int", "unit": "bpm" },
+          { "name": "min_hrv", "type": "int", "unit": "ms" },
+          { "name": "max_hrv", "type": "int", "unit": "ms" },
+          { "name": "movement_30_seconds", "type": "string", "unit": "" },
+          { "name": "number_restless_periods", "type": "int", "unit": "" },
+          { "name": "efficiency", "type": "float", "unit": "bpm" },
+          { "name": "awake_time", "type": "int", "unit": "minutes" },
+          { "name": "deep_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "light_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "rem_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "sleep_phase_5_min", "type": "string", "unit": "" },
+          { "name": "bedtime_start", "type": "string", "unit": "" },
+          { "name": "bedtime_end", "type": "string", "unit": "" },
+          { "name": "latency", "type": "int", "unit": "minutes" },
+          { "name": "time_in_bed", "type": "int", "unit": "minutes" },
+          { "name": "total_sleep_duration", "type": "int", "unit": "minutes" },
+          { "name": "type_sleep", "type": "string", "unit": "" }
+        ],
+        "rows": []
+      }
+    },
+    "dataid": "79e0896c-ce36-4ee4-b0e4-cfd0dba67219",
+    "day": "2025-10-05",
+    "analysiscompletedtime": ""
+  }
+]

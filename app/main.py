@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from sqlmodel import SQLModel, create_engine
 
 from app.routers import (
+    emotional_wellbeing,
     missions,
     physical_activity,
     recommendation_plans,
@@ -50,6 +51,7 @@ app.include_router(selected_contents.router)
 app.include_router(recommendation_plans.router_recommendation_plans)
 app.include_router(recommendation_plans.router_notification_plans)
 app.include_router(physical_activity.router)
+app.include_router(emotional_wellbeing.router)
 
 
 @app.get("/")
