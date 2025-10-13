@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -29,7 +29,7 @@ class NewUser(BaseModel):
     level: Optional[int] = None
     voiceRecording: Optional[str] = None
     education: Optional[str] = None
-    digitalLiteracy: Optional[str] = None
+    digitalLiteracy: Optional[Union[int, str]] = None
     occupation: Optional[str] = None
 
 
