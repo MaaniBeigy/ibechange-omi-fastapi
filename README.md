@@ -65,14 +65,14 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
 ### Recommendation Plan
 
 ```bash
-curl "http://localhost:3200/recommendation_plans/?start_time=2025-10-17T13:00:00&end_time=2025-10-17T14:00:00"
+curl "http://localhost:3200/recommendation_plans/?start_time=2025-10-17T15:00:00&end_time=2025-10-17T16:00:00"
 ```
 
 ### Notification Plan
 
 ```bash
 
-curl "http://localhost:3200/notification_plans/?start_time=2025-10-17T13:00:00&end_time=2025-10-17T14:00:00"
+curl "http://localhost:3200/notification_plans/?start_time=2025-10-17T15:00:00&end_time=2025-10-17T16:00:00"
 ```
 
 ### Updates
