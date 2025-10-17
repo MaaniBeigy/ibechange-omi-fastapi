@@ -1,6 +1,6 @@
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from dotenv import load_dotenv
@@ -18,7 +18,11 @@ def generate_random_schedule(
     cooldown_minutes = int(os.getenv("BETWEEN_NOTIFICATION_COOLDOWN", 180))
     start_hour = datetime.strptime(os.getenv("START_HOUR", "08:00"), "%H:%M").time()
     end_hour = datetime.strptime(os.getenv("END_HOUR", "22:00"), "%H:%M").time()
-
+    # --- normalize inputs to UTC-naive so comparisons with naive scheduled_time are safe ---
+    if start_time.tzinfo is not None:
+        start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
+    if end_time.tzinfo is not None:
+        end_time = end_time.astimezone(timezone.utc).replace(tzinfo=None)
     schedules = []
     current_date = start_time.date()
     end_date = end_time.date()

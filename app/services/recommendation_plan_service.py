@@ -42,7 +42,10 @@ def generate_recommendation_plan(
     cooldown_minutes = int(os.getenv("BETWEEN_NOTIFICATION_COOLDOWN", 180))
     cooldown_delta = timedelta(minutes=cooldown_minutes)
     now = datetime.now(timezone.utc)
-
+    if end_time <= now:
+        return []
+    if start_time < now:
+        start_time = now
     # ----------------------------- Check cooldown window -----------------------------
     recent_exists = db.exec(
         select(RecommendationPlan)
@@ -131,9 +134,9 @@ def generate_recommendation_plan(
         return []
 
     # Materialize mission UUIDs
-    missions = db.exec(
-        select(Mission).where(Mission.is_deleted == False)
-    ).scalars().all()
+    missions = (
+        db.exec(select(Mission).where(Mission.is_deleted == False)).scalars().all()
+    )
     mission_by_code = {m.mission_id: m.id for m in missions}
 
     plans: List[RecommendationPlan] = []

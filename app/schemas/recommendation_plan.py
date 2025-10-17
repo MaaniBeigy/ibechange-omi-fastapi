@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,6 +9,9 @@ class RecommendationPlanItem(BaseModel):
     content_id: str
     scheduled_for: datetime
     plan_id: UUID
+    mission_id: str
+    mission_start_time: Optional[datetime] = None
+    mission_end_time: Optional[datetime] = None
 
 
 class RecommendationPlanResponse(BaseModel):

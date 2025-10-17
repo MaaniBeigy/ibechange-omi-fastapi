@@ -11,6 +11,7 @@ from app.models.recommendation import Recommendation
 from app.models.selected_content import SelectedContent
 from app.models.user import User
 from app.schemas.selected_content import SelectedContentCreate, SelectedContentList
+from app.utils.helpers import _to_utc
 
 router = APIRouter(prefix="/selected_contents", tags=["Selected Contents"])
 
@@ -86,13 +87,21 @@ def create_selected_contents(
                 )
                 continue
 
-            # Insert new SelectedContent
+            # Insert new SelectedContent'
+            mst_utc = (
+                _to_utc(content.mission_start_time)
+                if content.mission_start_time
+                else None
+            )
+            met_utc = (
+                _to_utc(content.mission_end_time) if content.mission_end_time else None
+            )
             db_content = SelectedContent(
                 id=content.plan_id,
                 user_id=user_id,
                 contents=[c.model_dump() for c in unique_contents],
-                mission_start_time=content.mission_start_time,
-                mission_end_time=content.mission_end_time,
+                mission_start_time=mst_utc,
+                mission_end_time=met_utc,
                 created_at=datetime.now(timezone.utc),
                 is_deleted=False,
             )

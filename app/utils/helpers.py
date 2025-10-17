@@ -46,8 +46,26 @@ def _to_naive_utc(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def _aware_utc(dt: datetime) -> datetime:
+    return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _iso_to_utc_aware(dt_str: str) -> datetime:
+    dt = datetime.fromisoformat(dt_str)
+    if dt.tzinfo is None:
+        # treat naive as UTC
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _minutes_since_midnight(dt: datetime) -> int:
     return dt.hour * 60 + dt.minute
+
+
+def _to_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
 def _parse_uuid_or_none(value: str) -> Optional[uuid.UUID]:
