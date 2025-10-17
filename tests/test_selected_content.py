@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -302,3 +303,124 @@ def test_selected_content_null_timestamps_idempotent(client):
         assert len(sc_rows) == 1
         assert sc_rows[0].mission_start_time is None
         assert sc_rows[0].mission_end_time is None
+
+
+
+
+
+def test_selected_contents_get_with_naive_times_returns_Z(client):
+    """
+    POST SelectedContent with NAIVE UTC timestamps (no 'Z') and verify
+    GET /selected_contents returns those times with a trailing 'Z'.
+    """
+    user_id_1 = str(uuid.uuid4())
+    user_id_2 = str(uuid.uuid4())
+    plan_id_1 = "7b8a9f54-801a-4ab0-afe0-06f100441793"
+    plan_id_2 = "3b8a9f54-701a-1ab0-afe0-05f100441796"
+
+    # build naive-UTC ISO strings (no timezone, no 'Z')
+    now_utc = datetime.now(timezone.utc).replace(microsecond=0)
+    start_naive = now_utc.replace(tzinfo=None).isoformat()
+    end_naive = (now_utc + timedelta(days=10)).replace(tzinfo=None).isoformat()
+
+    payload = {
+        user_id_1: {
+            "contents": [
+                {"id": "NRs6", "type": "resource", "mission_id": "NM31"},
+                {"id": "NRc54", "type": "recommendation", "mission_id": "NM31"},
+            ],
+            "mission_start_time": start_naive,
+            "mission_end_time": end_naive,
+            "plan_id": plan_id_1,
+        },
+        user_id_2: {
+            "contents": [
+                {"id": "NRc30", "type": "recommendation", "mission_id": "NM31"},
+                {"id": "NRc53", "type": "recommendation", "mission_id": "NM31"},
+            ],
+            "mission_start_time": start_naive,
+            "mission_end_time": end_naive,
+            "plan_id": plan_id_2,
+        },
+    }
+
+    # POST create
+    resp_post = client.post("/selected_contents/", json=payload)
+    assert resp_post.status_code == 200
+
+    # GET list
+    resp_get = client.get("/selected_contents/")
+    assert resp_get.status_code == 200
+    data = resp_get.json()
+
+    # Ensure both users present
+    assert user_id_1 in data
+    assert user_id_2 in data
+
+    # The router should normalize to Z (UTC)
+    assert data[user_id_1]["mission_start_time"].endswith("Z")
+    assert data[user_id_1]["mission_end_time"].endswith("Z")
+    assert data[user_id_2]["mission_start_time"].endswith("Z")
+    assert data[user_id_2]["mission_end_time"].endswith("Z")
+
+    # Contents and plan_id preserved
+    assert data[user_id_1]["plan_id"] == plan_id_1
+    assert data[user_id_2]["plan_id"] == plan_id_2
+    assert any(c["id"] == "NRs6" for c in data[user_id_1]["contents"])
+    assert any(c["id"] == "NRc30" for c in data[user_id_2]["contents"])
+
+
+def test_selected_contents_get_with_aware_times_keeps_Z(client):
+    """
+    POST SelectedContent with timezone-aware UTC timestamps (with 'Z')
+    and verify GET /selected_contents returns the same times with 'Z'.
+    """
+    user_id = str(uuid.uuid4())
+    plan_id = "8b8a9f54-801a-4ab0-afe0-06f100441799"
+
+    # build aware UTC ISO strings ending with 'Z'
+    start_aware = (
+        datetime(2025, 10, 17, 10, 0, 33, 919000, tzinfo=timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    end_aware = (
+        datetime(2025, 10, 29, 10, 0, 33, 919000, tzinfo=timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+    payload = {
+        user_id: {
+            "contents": [
+                {"id": "NRc19", "type": "recommendation", "mission_id": "NM31"},
+                {"id": "NRc53", "type": "recommendation", "mission_id": "NM31"},
+            ],
+            "mission_start_time": start_aware,
+            "mission_end_time": end_aware,
+            "plan_id": plan_id,
+        }
+    }
+
+    # POST create
+    resp_post = client.post("/selected_contents/", json=payload)
+    assert resp_post.status_code == 200
+
+    # GET list
+    resp_get = client.get("/selected_contents/")
+    assert resp_get.status_code == 200
+    data = resp_get.json()
+
+    # Verify presence and 'Z' suffix
+    assert user_id in data
+    assert data[user_id]["mission_start_time"].endswith("Z")
+    assert data[user_id]["mission_end_time"].endswith("Z")
+
+    # Verify exact timestamps normalized to Z
+    assert data[user_id]["mission_start_time"] == start_aware
+    assert data[user_id]["mission_end_time"] == end_aware
+
+    # Contents and plan_id preserved
+    assert data[user_id]["plan_id"] == plan_id
+    ids = {c["id"] for c in data[user_id]["contents"]}
+    assert {"NRc19", "NRc53"} <= ids

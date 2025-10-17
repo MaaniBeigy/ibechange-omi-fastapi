@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Set, cast
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
@@ -168,3 +169,41 @@ def create_selected_contents(
         db.commit()
         logger.debug("Committed all changes")
     return selected_contents
+
+
+@router.get("/", response_model=dict)
+def list_selected_contents(
+    db: Session = Depends(get_db),
+    user_id: UUID | None = Query(None),
+    include_deleted: bool = Query(False),
+):
+    def _isoz(dt: datetime | None) -> str | None:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
+
+    stmt = select(SelectedContent)
+    if user_id:
+        stmt = stmt.where(SelectedContent.user_id == user_id)
+    if not include_deleted:
+        stmt = stmt.where(SelectedContent.is_deleted == False)
+    rows = db.exec(stmt.order_by(SelectedContent.created_at.desc())).all()
+
+    # If multiple records exist per user, keep the most recent (since we sorted desc)
+    out: Dict[str, dict] = {}
+    for sc in rows:
+        uid = str(sc.user_id)
+        if uid in out:
+            continue
+        out[uid] = {
+            "contents": sc.contents or [],
+            "mission_start_time": _isoz(sc.mission_start_time),
+            "mission_end_time": _isoz(sc.mission_end_time),
+            "plan_id": str(sc.id),
+        }
+
+    return out

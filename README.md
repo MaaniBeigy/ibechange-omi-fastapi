@@ -62,6 +62,11 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
 
 ```
 
+```bash
+curl "http://localhost:3200/selected_contents/"
+```
+
+
 ### Recommendation Plan
 
 ```bash
