@@ -15,6 +15,7 @@ from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
 from app.models.selected_content import SelectedContent
 from app.models.user import User
+from app.services.recommendation_plan_service import generate_recommendation_plan
 
 load_dotenv()
 
@@ -313,7 +314,7 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
     We need 3 per week, so 2 more are generated.
     """
     user_id = uuid.uuid4()
-    now = datetime(2025, 7, 29, 7, 30, 0, 599149, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
     start = now
     end = now + timedelta(days=5)
 
@@ -324,19 +325,20 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
     monkeypatch.setenv("MAX_NOTIFICATIONS_PER_DAY", "5")
     monkeypatch.setenv("BETWEEN_NOTIFICATION_COOLDOWN", "30")  # minutes
 
-    # # deterministic schedule: 10 min, 40 min, 90 min, 120 min
-    # def fake_schedule(_, __):
-    #     return [
-    #         now + timedelta(minutes=10),
-    #         now + timedelta(minutes=40),  # rejected (too close to existing 60 min)
-    #         now + timedelta(minutes=90),
-    #         now + timedelta(minutes=120),
-    #     ]
+    # deterministic schedule inside [start, end]
+    def fake_schedule(s, e):
+        base = start
+        return [
+            base + timedelta(minutes=10),
+            base + timedelta(minutes=40),
+            base + timedelta(minutes=90),
+            base + timedelta(minutes=120),
+        ]
 
-    # monkeypatch.setattr(
-    #     "app.services.recommendation_plan_service.generate_random_schedule",
-    #     fake_schedule,
-    # )
+    monkeypatch.setattr(
+        "app.services.recommendation_plan_service.generate_random_schedule",
+        fake_schedule,
+    )
 
     payload = {
         "474dbf4c-8922-4dac-aa35-92632a7bcaf8": {
@@ -350,8 +352,8 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
                 {"id": "NRc54", "type": "recommendation", "mission_id": "NM31"},
                 {"id": "NRc53", "type": "recommendation", "mission_id": "NM31"},
             ],
-            "mission_start_time": "2025-07-07T10:00:33.919000",
-            "mission_end_time": "2025-07-14T10:00:33.919000",
+            "mission_start_time": (now - timedelta(days=2)).isoformat(),
+            "mission_end_time": (now + timedelta(days=7)).isoformat(),
             "plan_id": "7b8a9f54-801a-4ab0-afe0-06f100441793",
         },
         "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
@@ -366,8 +368,8 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
                 {"id": "NRc19", "type": "recommendation", "mission_id": "NM31"},
                 {"id": "NRc53", "type": "recommendation", "mission_id": "NM31"},
             ],
-            "mission_start_time": "2025-07-07T10:00:33.919000",
-            "mission_end_time": "2025-07-14T10:00:33.919000",
+            "mission_start_time": (now - timedelta(days=2)).isoformat(),
+            "mission_end_time": (now + timedelta(days=7)).isoformat(),
             "plan_id": "3b8a9f54-701a-1ab0-afe0-05f100441796",
         },
     }
@@ -463,8 +465,12 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
     plans = data["recommendation_plans"][0]["plans"]
     assert len(plans) == 2
     scheduled_for_set = set(p["scheduled_for"] for p in plans)
-    assert schedule_times[0].replace(tzinfo=None).isoformat() in scheduled_for_set
-    assert schedule_times[1].replace(tzinfo=None).isoformat() in scheduled_for_set
+
+    def _z(dt: datetime) -> str:
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    assert _z(schedule_times[0]) in scheduled_for_set
+    assert _z(schedule_times[1]) in scheduled_for_set
 
 
 def test_recommendation_plans_invalid_datetime_format(client):
@@ -826,3 +832,114 @@ def test_per_plan_content_unique_across_same_and_future_windows(client, monkeypa
             )
         ).all()
         assert len(cnt3) == 1  # no duplicates added
+
+
+def test_past_window_returns_empty(client):
+    now = datetime.now(timezone.utc)
+    # Entirely in the past
+    start_iso = (now - timedelta(days=2)).replace(tzinfo=None).isoformat()
+    end_iso = (now - timedelta(days=1)).replace(tzinfo=None).isoformat()
+
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    assert r.status_code == 200
+    assert r.json() == {"recommendation_plans": []}
+
+
+def test_window_end_le_window_start_skips_generation(client):
+    now = datetime.now(timezone.utc)
+
+    # Create a user + SelectedContent whose mission window includes *now*
+    user_id = uuid.uuid4()
+    with Session(engine) as s:
+        s.add(User(id=user_id, created_at=now, is_deleted=False))
+        s.commit()
+        s.add(
+            SelectedContent(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                contents=[{"id": "ANY", "type": "recommendation", "mission_id": "MID"}],
+                mission_start_time=(now - timedelta(days=1)),
+                mission_end_time=(now + timedelta(days=1)),
+                is_deleted=False,
+            )
+        )
+        s.commit()
+
+    # Ask for a degenerate future window with start == end (and > now)
+    start_dt = now + timedelta(minutes=5)
+    end_dt = start_dt  # makes window_end == window_start
+    start_iso = start_dt.replace(tzinfo=None).isoformat()
+    end_iso = end_dt.replace(tzinfo=None).isoformat()
+
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    assert r.status_code == 200
+    # Router should skip this SelectedContent (intersection empty) and return nothing
+    assert r.json() == {"recommendation_plans": []}
+
+
+def test_empty_contents_skips_generation(client):
+    now = datetime.now(timezone.utc)
+
+    user_id = uuid.uuid4()
+    with Session(engine) as s:
+        s.add(User(id=user_id, created_at=now, is_deleted=False))
+        s.commit()
+        s.add(
+            SelectedContent(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                contents=[],  # ← empty → content_missions == {}
+                mission_start_time=(now - timedelta(days=1)),
+                mission_end_time=(now + timedelta(days=1)),
+                is_deleted=False,
+            )
+        )
+        s.commit()
+
+    # Future window (so we don't hit the past-window early return)
+    start_iso = (now + timedelta(minutes=1)).replace(tzinfo=None).isoformat()
+    end_iso = (now + timedelta(hours=1)).replace(tzinfo=None).isoformat()
+
+    r = client.get(f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}")
+    assert r.status_code == 200
+    assert r.json() == {"recommendation_plans": []}
+
+
+def test_generate_plan_returns_empty_when_end_le_now(client, monkeypatch):
+    # Ensure service logic runs (not short-circuited by MODE)
+    monkeypatch.setenv("MODE", "test")
+
+    now = datetime.now(timezone.utc)
+    user_id = uuid.uuid4()
+    plan_id = uuid.uuid4()
+
+    with Session(engine) as s:
+        # Minimal DB setup: user, mission, recommendation
+        s.add(User(id=user_id, created_at=now, is_deleted=False))
+        mission = Mission(mission_id="MS_PAST")
+        rec = Recommendation(
+            content_id="RC_PAST",
+            content_type="recommendation",
+            missions=["MS_PAST"],
+            objective=[],
+            hapa=[],
+            comb=[],
+            intervention_type=[],
+        )
+        s.add_all([mission, rec])
+        s.commit()
+
+        # Entirely past window => end_time <= now
+        start_time = now - timedelta(hours=2)
+        end_time = now - timedelta(hours=1)
+
+        plans = generate_recommendation_plan(
+            user_id=user_id,
+            content_missions={"RC_PAST": "MS_PAST"},
+            plan_id=plan_id,
+            start_time=start_time,
+            end_time=end_time,
+            db=s,
+        )
+
+    assert plans == []
