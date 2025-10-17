@@ -46,6 +46,10 @@ def _to_naive_utc(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def _minutes_since_midnight(dt: datetime) -> int:
+    return dt.hour * 60 + dt.minute
+
+
 def _parse_uuid_or_none(value: str) -> Optional[uuid.UUID]:
     try:
         return uuid.UUID(value)
