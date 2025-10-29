@@ -291,6 +291,8 @@ def test_generation_respects_cooldown_and_break(client, monkeypatch):
                     {"id": "RC_B", "type": "recommendation", "mission_id": "MC_CDLN"},
                 ],
                 created_at=now,
+                mission_start_time=now,
+                mission_end_time=now + timedelta(hours=1),
             )
         )
         session.commit()
@@ -448,6 +450,8 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
                 {"id": "TST_LOOP2", "type": "recommendation", "mission_id": "MID_LOOP"},
             ],
             created_at=now,
+            mission_start_time=now.replace(hour=0, minute=0, second=0, microsecond=0),
+            mission_end_time=now.replace(hour=23, minute=59, second=59, microsecond=0),
         )
         session.add(selected)
         session.commit()
@@ -774,6 +778,8 @@ def test_per_plan_content_unique_across_same_and_future_windows(client, monkeypa
                     {"id": "RC_LOCK", "type": "recommendation", "mission_id": "MS_LOCK"}
                 ],
                 created_at=now,
+                mission_start_time=now,
+                mission_end_time=now + timedelta(hours=3),
             )
         )
         session.commit()

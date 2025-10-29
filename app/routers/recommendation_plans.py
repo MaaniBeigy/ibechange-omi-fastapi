@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
+from sqlalchemy.sql import and_
 from sqlmodel import Session, join, select
 
 from app.dependencies import get_db
@@ -10,6 +12,7 @@ from app.models.mission import Mission
 from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
 from app.models.selected_content import SelectedContent
+from app.models.user import MissionContent
 from app.schemas.recommendation_plan import (
     NotificationItem,
     NotificationUserBucket,
@@ -18,7 +21,7 @@ from app.schemas.recommendation_plan import (
     RecommendationPlanResponse,
 )
 from app.services.recommendation_plan_service import generate_recommendation_plan
-from app.utils.helpers import _iso_to_utc_aware, _to_utc, _aware_utc
+from app.utils.helpers import _aware_utc, _iso_to_utc_aware, _to_utc
 
 router_recommendation_plans = APIRouter(
     prefix="/recommendation_plans", tags=["Recommendation Plans"]
@@ -40,7 +43,8 @@ def get_recommendation_plans(
         raise HTTPException(status_code=422, detail="Invalid datetime format")
 
     now = datetime.now(timezone.utc)
-
+    user_plans: Dict[UUID, List[RecommendationPlanItem]] = {}
+    users_with_existing_plans: set[UUID] = set()
     # Query for existing recommendation plans in the given time range
     stmt = (
         select(RecommendationPlan, Recommendation, Mission, SelectedContent)
@@ -59,8 +63,6 @@ def get_recommendation_plans(
     results = db.exec(stmt).all()
 
     if results:
-        # If plans exist, group them by user_id and format the response
-        user_plans = {}
         for plan, rec, mission_row, selected in results:
             mission_code = mission_row.mission_id if mission_row else None
             if mission_code is None:
@@ -71,11 +73,9 @@ def get_recommendation_plans(
                             break
             if not mission_code:
                 mission_code = "UNKNOWN"
-            if plan.user_id not in user_plans:
-                user_plans[plan.user_id] = []
-            if plan.user_id not in user_plans:
-                user_plans[plan.user_id] = []
-            user_plans[plan.user_id].append(
+
+            users_with_existing_plans.add(plan.user_id)
+            user_plans.setdefault(plan.user_id, []).append(
                 RecommendationPlanItem(
                     content_id=rec.content_id,
                     scheduled_for=plan.scheduled_for.astimezone(timezone.utc),
@@ -93,78 +93,157 @@ def get_recommendation_plans(
                     ),
                 )
             )
-        # Build the response as a list of RecommendationPlanResponse objects
+    # If the window is in the past, do not generate, just return existing
+    if end_dt < now:
         response = [
-            RecommendationPlanResponse(user_id=user_id, plans=items)
-            for user_id, items in user_plans.items()
+            RecommendationPlanResponse(user_id=uid, plans=items)
+            for uid, items in user_plans.items()
         ]
         return RecommendationPlanList(recommendation_plans=response)
 
-    if not results:
-        # If asked for a past window, do not generate new plans
-        if end_dt < now:
-            return RecommendationPlanList(recommendation_plans=[])
     # --------------------- If no plans exist, generate new plans ---------------------
-    # Fetch all non-deleted SelectedContents whose mission window includes current time
-    selected_contents = db.exec(
-        select(SelectedContent).where(
-            SelectedContent.is_deleted == False,
-            (
-                (SelectedContent.mission_start_time == None)
-                | (SelectedContent.mission_start_time <= now)
+    # Latest SelectedContent per user
+    latest_sc_subq = (
+        select(
+            SelectedContent.user_id,
+            func.max(SelectedContent.mission_start_time).label(
+                "latest_mission_start_time"
             ),
+        )
+        .where(
+            SelectedContent.is_deleted == False,
+            SelectedContent.mission_start_time.is_not(None),
+        )
+        .group_by(SelectedContent.user_id)
+        .subquery()
+    )
+    selected_contents = db.exec(
+        select(SelectedContent)
+        .join(
+            latest_sc_subq,
+            and_(
+                SelectedContent.user_id == latest_sc_subq.c.user_id,
+                SelectedContent.mission_start_time
+                == latest_sc_subq.c.latest_mission_start_time,
+            ),
+        )
+        .where(
+            SelectedContent.is_deleted == False,
+            # only generate for users who did not already have plans in-window
             (
-                (SelectedContent.mission_end_time == None)
-                | (SelectedContent.mission_end_time >= now)
+                SelectedContent.user_id.notin_(users_with_existing_plans)
+                if users_with_existing_plans
+                else True
             ),
         )
     ).all()
+    # Resolve mission codes -> Mission UUIDs
+    mission_codes: set[str] = set()
+    for sc in selected_contents:
+        for c in sc.contents or []:
+            mc = c.get("mission_id")
+            if mc:
+                mission_codes.add(mc)
+    mission_rows = (
+        db.exec(select(Mission).where(Mission.mission_id.in_(mission_codes))).all()
+        if mission_codes
+        else []
+    )
+    mission_code_to_uuid = {m.mission_id: m.id for m in mission_rows}
+    new_plans = []
+    # Preload MissionContent rows for these users/missions, then map by (user_id, mission_uuid, selection_timestamp)
+    user_ids = list({sc.user_id for sc in selected_contents})
+    mission_uuids = list(mission_code_to_uuid.values())
+
+    mc_rows = (
+        db.exec(
+            select(MissionContent).where(
+                MissionContent.is_deleted == False,
+                MissionContent.user_id.in_(user_ids) if user_ids else False,
+                (
+                    MissionContent.mission_id.in_(mission_uuids)
+                    if mission_uuids
+                    else False
+                ),
+            )
+        ).all()
+        if user_ids and mission_uuids
+        else []
+    )
+    # Key by (user_id, mission_uuid, selection_timestamp)
+    mc_map: dict[tuple[UUID, UUID, datetime | None], MissionContent] = {}
+    for mc in mc_rows:
+        mc_map[(mc.user_id, mc.mission_id, mc.selection_timestamp)] = mc
 
     new_plans = []
-    for content in selected_contents:
-        # Extract content_id -> mission_id mapping from list of dicts in SelectedContent
-        content_missions = {c["id"]: c["mission_id"] for c in content.contents}
-        if not content_missions:
+    for sc in selected_contents:
+        # Map content_id -> mission_code for this SelectedContent
+        content_missions_all = {
+            c["id"]: c.get("mission_id") for c in (sc.contents or []) if c.get("id")
+        }
+        if not content_missions_all:
             continue
 
-        # -------------------- Normalize DB datetimes to UTC-aware --------------------
-        mst = content.mission_start_time
-        if mst is not None:
-            mst = (
-                mst.replace(tzinfo=timezone.utc)
-                if mst.tzinfo is None
-                else mst.astimezone(timezone.utc)
-            )
+        # Group content_ids by their mission_code
+        by_mission_code: dict[str, list[str]] = {}
+        for cid, mcode in content_missions_all.items():
+            if not mcode:
+                continue
+            by_mission_code.setdefault(mcode, []).append(cid)
 
-        met = content.mission_end_time
-        if met is not None:
-            met = (
-                met.replace(tzinfo=timezone.utc)
-                if met.tzinfo is None
-                else met.astimezone(timezone.utc)
+        # For each mission_code, try to use MissionContent
+        # otherwise fallback to SelectedContent times
+        for mission_code, content_ids in by_mission_code.items():
+            mission_uuid = mission_code_to_uuid.get(mission_code)
+
+            # Defaults from SelectedContent (fallback)
+            sel_ts = sc.mission_start_time
+            mc_end = sc.mission_end_time
+
+            # Try MissionContent only if we know the Mission UUID
+            if mission_uuid:
+                mc_key = (sc.user_id, mission_uuid, sc.mission_start_time)
+                mc = mc_map.get(mc_key)
+                if mc:
+                    sel_ts = mc.selection_timestamp
+                    mc_end = mc.mission_end_time
+
+            # Normalize to UTC-aware
+            if sel_ts is not None:
+                sel_ts = (
+                    sel_ts.replace(tzinfo=timezone.utc)
+                    if sel_ts.tzinfo is None
+                    else sel_ts.astimezone(timezone.utc)
+                )
+            if mc_end is not None:
+                mc_end = (
+                    mc_end.replace(tzinfo=timezone.utc)
+                    if mc_end.tzinfo is None
+                    else mc_end.astimezone(timezone.utc)
+                )
+
+            # Clip using (MissionContent if available) else (SelectedContent) + request window + now
+            window_start = max(start_dt, now, sel_ts or start_dt)
+            window_end = min(end_dt, mc_end or end_dt)
+            if window_end <= window_start:
+                continue
+
+            # Build mapping only for this mission slice
+            content_missions_subset = {cid: mission_code for cid in content_ids}
+
+            new_plans += generate_recommendation_plan(
+                sc.user_id,
+                content_missions_subset,
+                sc.id,  # plan_id
+                window_start,
+                window_end,
+                db,
             )
-        # ----------------------- Clip to mission window and now ----------------------
-        window_start = max(
-            start_dt,
-            now,
-            mst or start_dt,
-        )
-        window_end = min(
-            end_dt,
-            met or end_dt,
-        )
-        if window_end <= window_start:
-            continue
-        # Generate recommendation plans for each user/content
-        new_plans += generate_recommendation_plan(
-            content.user_id, content_missions, content.id, window_start, window_end, db
-        )
 
     # Commit all new plans to the database
     db.commit()
 
     # Format the response for the newly created plans
-    user_plans = {}
     recommendation_ids = [p.recommendation_id for p in new_plans]
     recommendation_map = {
         r.id: r.content_id
