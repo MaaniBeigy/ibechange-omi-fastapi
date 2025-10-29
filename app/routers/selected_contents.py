@@ -4,6 +4,7 @@ from typing import Dict, Set, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
@@ -45,11 +46,6 @@ def create_selected_contents(
             else:
                 logger.debug(f"User {user_id} already exists")
 
-            # Fetch existing SelectedContent for this user
-            user_contents = db.exec(
-                select(SelectedContent).where(SelectedContent.user_id == user_id)
-            ).all()
-
             # Deduplicate contents by content_id
             unique_contents_dict = {}
             for c in content.contents:
@@ -70,25 +66,7 @@ def create_selected_contents(
 
             incoming_contents = [c.model_dump() for c in unique_contents]
             canonical_incoming = _canonical_contents(incoming_contents)
-            start_naive = _naive_utc(content.mission_start_time)
-            end_naive = _naive_utc(content.mission_end_time)
-            # Check if SelectedContent with same plan_id, contents, and times exists
-            already_exists = any(
-                str(sc.id) == str(content.plan_id)
-                and _canonical_contents(sc.contents) == canonical_incoming
-                and _naive_utc(sc.mission_start_time) == start_naive
-                and _naive_utc(sc.mission_end_time) == end_naive
-                and not sc.is_deleted
-                for sc in user_contents
-            )
-            if already_exists:
-                logger.debug(
-                    "SelectedContent already exists for user "
-                    + f"{user_id} and plan_id={content.plan_id}, skipping"
-                )
-                continue
-
-            # Insert new SelectedContent'
+            # Normalize times once
             mst_utc = (
                 _to_utc(content.mission_start_time)
                 if content.mission_start_time
@@ -97,19 +75,65 @@ def create_selected_contents(
             met_utc = (
                 _to_utc(content.mission_end_time) if content.mission_end_time else None
             )
-            db_content = SelectedContent(
-                id=content.plan_id,
-                user_id=user_id,
-                contents=[c.model_dump() for c in unique_contents],
-                mission_start_time=mst_utc,
-                mission_end_time=met_utc,
-                created_at=datetime.now(timezone.utc),
-                is_deleted=False,
-            )
-            db.add(db_content)
-            logger.debug(
-                f"Added SelectedContent for user {user_id} and plan_id={content.plan_id}"
-            )
+            # Upsert-by-plan_id (same user): update if exists, else insert
+            existing_by_id = db.exec(
+                select(SelectedContent).where(SelectedContent.id == content.plan_id)
+            ).first()
+            if existing_by_id:
+                if str(existing_by_id.user_id) != str(user_id):
+                    logger.error(
+                        "Incoming plan_id=%s belongs to another user (existing=%s, incoming=%s)",
+                        content.plan_id,
+                        existing_by_id.user_id,
+                        user_id,
+                    )
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"plan_id {content.plan_id} already exists for another user ({existing_by_id.user_id})",
+                    )
+                same_payload = (
+                    _canonical_contents(existing_by_id.contents or [])
+                    == canonical_incoming
+                    and _naive_utc(existing_by_id.mission_start_time)
+                    == _naive_utc(mst_utc)
+                    and _naive_utc(existing_by_id.mission_end_time)
+                    == _naive_utc(met_utc)
+                    and not existing_by_id.is_deleted
+                )
+                if same_payload:
+                    logger.debug(
+                        "SelectedContent already exists for user %s and plan_id=%s, skipping",
+                        user_id,
+                        content.plan_id,
+                    )
+                    continue
+                # UPDATE in place
+                existing_by_id.contents = [c.model_dump() for c in unique_contents]
+                existing_by_id.mission_start_time = mst_utc
+                existing_by_id.mission_end_time = met_utc
+                existing_by_id.modified_at = datetime.now(timezone.utc)
+                logger.debug(
+                    "Updated SelectedContent for user %s and plan_id=%s",
+                    user_id,
+                    content.plan_id,
+                )
+            else:
+                db_content = SelectedContent(
+                    id=content.plan_id,
+                    user_id=user_id,
+                    contents=[c.model_dump() for c in unique_contents],
+                    mission_start_time=mst_utc,
+                    mission_end_time=met_utc,
+                    created_at=datetime.now(timezone.utc),
+                    is_deleted=False,
+                )
+                db.add(db_content)
+                logger.debug(
+                    "Added SelectedContent for user %s and plan_id=%s",
+                    user_id,
+                    content.plan_id,
+                )
+
             # Collect unique mission_ids
             mission_ids: Set[str] = {c.mission_id for c in unique_contents}
             logger.debug(f"Unique mission_ids: {mission_ids}")
@@ -165,6 +189,15 @@ def create_selected_contents(
                     logger.debug(f"Created new Mission with mission_id: {mission_id}")
                 else:
                     logger.debug(f"Mission {mission_id} already exists")
+
+            try:
+                db.commit()
+            except IntegrityError as e:
+                db.rollback()
+                logger.exception("Commit failed due to integrity error")
+                raise HTTPException(
+                    status_code=409, detail="Duplicate SelectedContent id"
+                ) from e
 
         db.commit()
         logger.debug("Committed all changes")
