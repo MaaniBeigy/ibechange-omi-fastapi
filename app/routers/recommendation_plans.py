@@ -75,6 +75,19 @@ def get_recommendation_plans(
                 mission_code = "UNKNOWN"
 
             users_with_existing_plans.add(plan.user_id)
+            sel_ts = selected.mission_start_time
+            if plan.mission_id:
+                mc_sel = db.exec(
+                    select(MissionContent.selection_timestamp).where(
+                        MissionContent.user_id == plan.user_id,
+                        MissionContent.mission_id == plan.mission_id,
+                        MissionContent.selection_timestamp
+                        == selected.mission_start_time,
+                        MissionContent.is_deleted == False,
+                    )
+                ).first()
+                if mc_sel:
+                    sel_ts = mc_sel
             user_plans.setdefault(plan.user_id, []).append(
                 RecommendationPlanItem(
                     content_id=rec.content_id,
@@ -82,9 +95,7 @@ def get_recommendation_plans(
                     plan_id=plan.plan_id,
                     mission_id=mission_code,
                     mission_start_time=(
-                        selected.mission_start_time.astimezone(timezone.utc)
-                        if selected.mission_start_time
-                        else None
+                        sel_ts.astimezone(timezone.utc) if sel_ts else None
                     ),
                     mission_end_time=(
                         selected.mission_end_time.astimezone(timezone.utc)
@@ -268,6 +279,7 @@ def get_recommendation_plans(
         s.id: (s.mission_start_time, s.mission_end_time) for s in selected_rows
     }
     selected_contents_map = {s.id: (s.contents or []) for s in selected_rows}
+    selected_rows_map = {s.id: s for s in selected_rows}
     for plan in new_plans:
         if plan.user_id not in user_plans:
             user_plans[plan.user_id] = []
@@ -281,9 +293,16 @@ def get_recommendation_plans(
                         break
         if not mission_code:
             mission_code = "UNKNOWN"
-        mst, met = selected_times_map.get(plan.plan_id, (None, None))
-        mst_utc = _to_utc(mst)
-        met_utc = _to_utc(met)
+        # prefer MissionContent.selection_timestamp; fallback to SelectedContent.mission_start_time
+        sc = selected_rows_map.get(plan.plan_id)
+        sel_ts = sc.mission_start_time if sc else None
+        end_ts = sc.mission_end_time if sc else None
+        if plan.mission_id and sc:
+            mc = mc_map.get((plan.user_id, plan.mission_id, sc.mission_start_time))
+            if mc and mc.selection_timestamp:
+                sel_ts = mc.selection_timestamp
+        mst_utc = _to_utc(sel_ts)
+        met_utc = _to_utc(end_ts)
         user_plans[plan.user_id].append(
             RecommendationPlanItem(
                 content_id=content_id,
