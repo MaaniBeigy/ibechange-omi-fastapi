@@ -28,6 +28,7 @@ class NotificationItem(BaseModel):
     send_timestamp: datetime
     type: str
     mission: str
+    selection_timestamp: Optional[datetime] = None
 
 
 class NotificationUserBucket(BaseModel):

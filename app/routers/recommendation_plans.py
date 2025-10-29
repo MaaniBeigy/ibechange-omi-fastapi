@@ -421,6 +421,11 @@ def get_notification_plans(
                     ),
                     type=ctype,
                     mission=mission_code,
+                    selection_timestamp=(
+                        plan_item.mission_start_time.replace(tzinfo=None)
+                        if (plan_item.mission_start_time and plan_item.mission_start_time.tzinfo)
+                        else plan_item.mission_start_time
+                    ),
                 )
             )
 
