@@ -46,13 +46,8 @@ def create_selected_contents(
             else:
                 logger.debug(f"User {user_id} already exists")
 
-            # Deduplicate contents by content_id
-            unique_contents_dict = {}
-            for c in content.contents:
-                # If the same content_id already seen, skip
-                if c.id not in unique_contents_dict:
-                    unique_contents_dict[c.id] = c
-            unique_contents = list(unique_contents_dict.values())
+            raw_contents_models = list(content.contents)  # keep repeats, keep order
+            incoming_contents = [c.model_dump() for c in raw_contents_models]
 
             def _naive_utc(dt: datetime | None) -> datetime | None:
                 """Strip tzinfo post-conversion to UTC so DB / JSON timestamps match."""
@@ -64,7 +59,6 @@ def create_selected_contents(
                 """Sort by content_id so order differences don't matter."""
                 return sorted(raw, key=lambda x: x["id"])
 
-            incoming_contents = [c.model_dump() for c in unique_contents]
             canonical_incoming = _canonical_contents(incoming_contents)
             # Normalize times once
             mst_utc = (
@@ -108,7 +102,7 @@ def create_selected_contents(
                     )
                     continue
                 # UPDATE in place
-                existing_by_id.contents = [c.model_dump() for c in unique_contents]
+                existing_by_id.contents = incoming_contents
                 existing_by_id.mission_start_time = mst_utc
                 existing_by_id.mission_end_time = met_utc
                 existing_by_id.modified_at = datetime.now(timezone.utc)
@@ -121,7 +115,7 @@ def create_selected_contents(
                 db_content = SelectedContent(
                     id=content.plan_id,
                     user_id=user_id,
-                    contents=[c.model_dump() for c in unique_contents],
+                    contents=incoming_contents,
                     mission_start_time=mst_utc,
                     mission_end_time=met_utc,
                     created_at=datetime.now(timezone.utc),
@@ -135,11 +129,19 @@ def create_selected_contents(
                 )
 
             # Collect unique mission_ids
-            mission_ids: Set[str] = {c.mission_id for c in unique_contents}
+            seen_ids = set()
+            unique_for_meta = []
+            for c in raw_contents_models:
+                if c.id not in seen_ids:
+                    unique_for_meta.append(c)
+                    seen_ids.add(c.id)
+            mission_ids: Set[str] = {
+                c.mission_id for c in unique_for_meta if c.mission_id
+            }
             logger.debug(f"Unique mission_ids: {mission_ids}")
 
             # Process Recommendations and Missions
-            for c in unique_contents:
+            for c in unique_for_meta:
                 existing_recommendation = db.exec(
                     select(Recommendation).where(
                         Recommendation.content_id == c.id,
@@ -150,7 +152,7 @@ def create_selected_contents(
                     db_recommendation = Recommendation(
                         content_id=c.id,
                         content_type=c.type.lower(),
-                        missions=[c.mission_id],
+                        missions=[c.mission_id] if c.mission_id else [],
                         objective=[],
                         hapa=[],
                         comb=[],
@@ -162,10 +164,11 @@ def create_selected_contents(
                     logger.debug(f"Created new Recommendation for content_id: {c.id}")
                 else:
                     # Update missions field if mission_id not present
-                    if c.mission_id not in existing_recommendation.missions:
-                        # reassignment so SQLAlchemy notices the change
+                    if c.mission_id and c.mission_id not in (
+                        existing_recommendation.missions or []
+                    ):
                         existing_recommendation.missions = (
-                            existing_recommendation.missions + [c.mission_id]
+                            (existing_recommendation.missions or []) + [c.mission_id]
                         )
                         logger.debug(
                             f"Updated Recommendation missions for content_id: {c.id}"

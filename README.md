@@ -70,13 +70,13 @@ curl "http://localhost:3200/selected_contents/"
 ### Recommendation Plan
 
 ```bash
-curl "http://localhost:3200/recommendation_plans/?start_time=2025-10-29T14:00:00&end_time=2025-10-29T18:00:00"
+curl "http://localhost:3200/recommendation_plans/?start_time=2025-11-07T14:00:00&end_time=2025-11-07T18:00:00"
 ```
 
 ### Notification Plan
 
 ```bash
-curl "http://localhost:3200/notification_plans/?start_time=2025-10-29T14:00:00&end_time=2025-10-29T18:00:00"
+curl "http://localhost:3200/notification_plans/?start_time=2025-11-07T14:00:00&end_time=2025-11-07T18:00:00"
 ```
 
 ### Updates

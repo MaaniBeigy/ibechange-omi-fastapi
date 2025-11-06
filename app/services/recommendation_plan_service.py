@@ -12,6 +12,7 @@ from sqlmodel import Session
 from app.models.mission import Mission
 from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
+from app.utils.helpers import _aware_utc
 from app.utils.scheduling import generate_random_schedule
 
 load_dotenv()
@@ -42,6 +43,8 @@ def generate_recommendation_plan(
     cooldown_minutes = int(os.getenv("BETWEEN_NOTIFICATION_COOLDOWN", 180))
     cooldown_delta = timedelta(minutes=cooldown_minutes)
     now = datetime.now(timezone.utc)
+    start_time = _aware_utc(start_time)
+    end_time = _aware_utc(end_time)
     if end_time <= now:
         return []
     if start_time < now:
@@ -71,7 +74,9 @@ def generate_recommendation_plan(
     # Already scheduled recommendation_ids for this plan → skip them
     already_rec_ids = {rp.recommendation_id for rp in existing_for_plan}
     # Count per-day across ALL existing so we respect max/day
-    existing_by_day = Counter(rp.scheduled_for.date() for rp in existing_for_plan)
+    existing_by_day = Counter(
+        _aware_utc(rp.scheduled_for).date() for rp in existing_for_plan
+    )
 
     existing_in_window = (
         db.exec(
@@ -84,7 +89,7 @@ def generate_recommendation_plan(
         .scalars()
         .all()
     )
-    scheduled_times = set(existing_in_window)
+    scheduled_times = {_aware_utc(t) for t in existing_in_window}
 
     # How many are still needed in this window?
     total_existing_in_window = len(existing_in_window)
@@ -95,9 +100,13 @@ def generate_recommendation_plan(
         return []
 
     # --------------------------- Generate fresh candidates ---------------------------
-    candidates = generate_random_schedule(start_time, end_time)
+    candidates = [
+        _aware_utc(ts) for ts in generate_random_schedule(start_time, end_time)
+    ]
+
     new_schedules: List[datetime] = []
     for ts in candidates:
+        ts = _aware_utc(ts)
         # cooldown against both existing_in_window and already-accepted candidates
         too_close = any(
             abs((ts - t).total_seconds()) < cooldown_delta.total_seconds()

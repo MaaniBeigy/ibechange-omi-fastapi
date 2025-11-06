@@ -118,7 +118,11 @@ def test_create_selected_contents_creates_records(client):
         # Exactly **one** SelectedContent row and it contains de‑duplicated entries.
         sc_rows = session.exec(select(SelectedContent)).all()
         assert len(sc_rows) == 1
-        assert len(sc_rows[0].contents) == 2  # NRs6 + NRc54
+        assert len(sc_rows[0].contents) == 3  # NRs6 + NRc54 + NRc54 (repeat)
+        assert (
+            sc_rows[0].contents
+            == payload["474dbf4c-8922-4dac-aa35-92632a7bcaf8"]["contents"]
+        )
 
         # User table contains our user (compare as strings for UUID).
         users = session.exec(select(User)).all()
@@ -303,9 +307,6 @@ def test_selected_content_null_timestamps_idempotent(client):
         assert len(sc_rows) == 1
         assert sc_rows[0].mission_start_time is None
         assert sc_rows[0].mission_end_time is None
-
-
-
 
 
 def test_selected_contents_get_with_naive_times_returns_Z(client):

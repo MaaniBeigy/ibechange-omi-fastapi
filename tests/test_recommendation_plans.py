@@ -55,7 +55,8 @@ def client():
 
 
 def _iso(dt: datetime) -> str:
-    return dt.replace(tzinfo=None).isoformat()
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 
 
 @pytest.fixture
@@ -246,11 +247,11 @@ def test_generation_respects_cooldown_and_break(client, monkeypatch):
     user_id = uuid.uuid4()
 
     # deterministic schedule: 10 min, 20 min, 45 min
-    def fake_schedule(_, __):
+    def fake_schedule(s, e):
         return [
-            now + timedelta(minutes=10),
-            now + timedelta(minutes=20),  # will be skipped (too close)
-            now + timedelta(minutes=45),
+            s + timedelta(minutes=10),
+            s + timedelta(minutes=20),  # will be skipped (too close)
+            s + timedelta(minutes=45),
         ]
 
     monkeypatch.setattr(
@@ -297,8 +298,14 @@ def test_generation_respects_cooldown_and_break(client, monkeypatch):
         )
         session.commit()
 
-    start_iso = now.replace(tzinfo=None).isoformat()
-    end_iso = (now + timedelta(hours=1)).replace(tzinfo=None).isoformat()
+    start_iso = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    end_iso = (
+        (now + timedelta(hours=1))
+        .astimezone(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
     resp = client.get(
         f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}"
     )
@@ -329,7 +336,7 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
 
     # deterministic schedule inside [start, end]
     def fake_schedule(s, e):
-        base = start
+        base = s
         return [
             base + timedelta(minutes=10),
             base + timedelta(minutes=40),
@@ -376,8 +383,9 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
         },
     }
 
-    start_iso = start.replace(tzinfo=None).isoformat()
-    end_iso = end.replace(tzinfo=None).isoformat()
+    start_iso = start.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    end_iso = end.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
     response = client.post("/selected_contents/", json=payload)
     assert response.status_code == 200
     resp = client.get(
@@ -400,16 +408,17 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
     monkeypatch.setenv("BETWEEN_NOTIFICATION_COOLDOWN", "1")  # minute
 
     now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    future = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
+        second=0, microsecond=0
+    )
     user_id = str(uuid.uuid4())
 
-    # Patch generate_random_schedule to return two times on the same day
-    schedule_times = [
-        now.replace(hour=10, minute=0),
-        now.replace(hour=12, minute=0),
-    ]
-
-    def fake_schedule(start, end):
-        return schedule_times
+    def fake_schedule(s, e):
+        # s will be tomorrow 00:00 in the request below, so these are 10:00 and 12:00 tomorrow
+        return [
+            s.replace(hour=10, minute=0, second=0, microsecond=0),
+            s.replace(hour=12, minute=0, second=0, microsecond=0),
+        ]
 
     monkeypatch.setattr(
         "app.services.recommendation_plan_service.generate_random_schedule",
@@ -449,16 +458,31 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
                 {"id": "TST_LOOP1", "type": "recommendation", "mission_id": "MID_LOOP"},
                 {"id": "TST_LOOP2", "type": "recommendation", "mission_id": "MID_LOOP"},
             ],
-            created_at=now,
-            mission_start_time=now.replace(hour=0, minute=0, second=0, microsecond=0),
-            mission_end_time=now.replace(hour=23, minute=59, second=59, microsecond=0),
+            created_at=future,
+            mission_start_time=future.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ),
+            mission_end_time=future.replace(
+                hour=23, minute=59, second=59, microsecond=0
+            ),
         )
         session.add(selected)
         session.commit()
 
     # Query the whole day
-    start_iso = now.replace(hour=0, minute=0, tzinfo=None).isoformat()
-    end_iso = now.replace(hour=23, minute=59, tzinfo=None).isoformat()
+    start_iso = (
+        future.replace(hour=0, minute=0)
+        .astimezone(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    end_iso = (
+        future.replace(hour=23, minute=59)
+        .astimezone(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
     response = client.get(
         f"/recommendation_plans/?start_time={start_iso}&end_time={end_iso}"
     )
@@ -473,8 +497,10 @@ def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):
     def _z(dt: datetime) -> str:
         return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    assert _z(schedule_times[0]) in scheduled_for_set
-    assert _z(schedule_times[1]) in scheduled_for_set
+    expected1 = future.replace(hour=10, minute=0, second=0, microsecond=0)
+    expected2 = future.replace(hour=12, minute=0, second=0, microsecond=0)
+    assert _z(expected1) in scheduled_for_set
+    assert _z(expected2) in scheduled_for_set
 
 
 def test_recommendation_plans_invalid_datetime_format(client):

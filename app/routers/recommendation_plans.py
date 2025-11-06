@@ -1,3 +1,4 @@
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 from uuid import UUID
@@ -161,7 +162,6 @@ def get_recommendation_plans(
         else []
     )
     mission_code_to_uuid = {m.mission_id: m.id for m in mission_rows}
-    new_plans = []
     # Preload MissionContent rows for these users/missions, then map by (user_id, mission_uuid, selection_timestamp)
     user_ids = list({sc.user_id for sc in selected_contents})
     mission_uuids = list(mission_code_to_uuid.values())
@@ -188,30 +188,21 @@ def get_recommendation_plans(
 
     new_plans = []
     for sc in selected_contents:
-        # Map content_id -> mission_code for this SelectedContent
-        content_missions_all = {
-            c["id"]: c.get("mission_id") for c in (sc.contents or []) if c.get("id")
-        }
-        if not content_missions_all:
-            continue
+        # Build windows per mission_code once
+        mission_windows: dict[str, tuple[datetime, datetime]] = {}
 
-        # Group content_ids by their mission_code
-        by_mission_code: dict[str, list[str]] = {}
-        for cid, mcode in content_missions_all.items():
-            if not mcode:
+        for c in (sc.contents or []):
+            mcode = c.get("mission_id")
+            if not mcode or mcode in mission_windows:
                 continue
-            by_mission_code.setdefault(mcode, []).append(cid)
 
-        # For each mission_code, try to use MissionContent
-        # otherwise fallback to SelectedContent times
-        for mission_code, content_ids in by_mission_code.items():
-            mission_uuid = mission_code_to_uuid.get(mission_code)
+            mission_uuid = mission_code_to_uuid.get(mcode)
 
             # Defaults from SelectedContent (fallback)
             sel_ts = sc.mission_start_time
             mc_end = sc.mission_end_time
 
-            # Try MissionContent only if we know the Mission UUID
+            # Prefer MissionContent if we know the Mission UUID
             if mission_uuid:
                 mc_key = (sc.user_id, mission_uuid, sc.mission_start_time)
                 mc = mc_map.get(mc_key)
@@ -233,19 +224,28 @@ def get_recommendation_plans(
                     else mc_end.astimezone(timezone.utc)
                 )
 
-            # Clip using (MissionContent if available) else (SelectedContent) + request window + now
+            # Clip times
             window_start = max(start_dt, now, sel_ts or start_dt)
             window_end = min(end_dt, mc_end or end_dt)
+
+            mission_windows[mcode] = (window_start, window_end)
+
+        # Iterate the list with exact order
+        for c in (sc.contents or []):
+            cid = c.get("id")
+            mcode = c.get("mission_id")
+            if not cid or not mcode:
+                continue
+
+            # Get window for this mission_code (fallback to request window)
+            window_start, window_end = mission_windows.get(mcode, (start_dt, end_dt))
             if window_end <= window_start:
                 continue
 
-            # Build mapping only for this mission slice
-            content_missions_subset = {cid: mission_code for cid in content_ids}
-
             new_plans += generate_recommendation_plan(
                 sc.user_id,
-                content_missions_subset,
-                sc.id,  # plan_id
+                {cid: mcode},  # single item, preserves sequence
+                sc.id,         # plan_id
                 window_start,
                 window_end,
                 db,
@@ -423,7 +423,10 @@ def get_notification_plans(
                     mission=mission_code,
                     selection_timestamp=(
                         plan_item.mission_start_time.replace(tzinfo=None)
-                        if (plan_item.mission_start_time and plan_item.mission_start_time.tzinfo)
+                        if (
+                            plan_item.mission_start_time
+                            and plan_item.mission_start_time.tzinfo
+                        )
                         else plan_item.mission_start_time
                     ),
                 )
