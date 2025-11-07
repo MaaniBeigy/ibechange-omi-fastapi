@@ -229,17 +229,17 @@ def list_selected_contents(
         stmt = stmt.where(SelectedContent.is_deleted == False)
     rows = db.exec(stmt.order_by(SelectedContent.created_at.desc())).all()
 
-    # If multiple records exist per user, keep the most recent (since we sorted desc)
-    out: Dict[str, dict] = {}
+    # Return ALL SelectedContent per user (most recent first due to ORDER BY)
+    out: Dict[str, list[dict]] = {}
     for sc in rows:
         uid = str(sc.user_id)
-        if uid in out:
-            continue
-        out[uid] = {
-            "contents": sc.contents or [],
-            "mission_start_time": _isoz(sc.mission_start_time),
-            "mission_end_time": _isoz(sc.mission_end_time),
-            "plan_id": str(sc.id),
-        }
+        out.setdefault(uid, []).append(
+            {
+                "contents": sc.contents or [],
+                "mission_start_time": _isoz(sc.mission_start_time),
+                "mission_end_time": _isoz(sc.mission_end_time),
+                "plan_id": str(sc.id),
+            }
+        )
 
     return out

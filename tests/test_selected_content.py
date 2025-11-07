@@ -353,22 +353,23 @@ def test_selected_contents_get_with_naive_times_returns_Z(client):
     resp_get = client.get("/selected_contents/")
     assert resp_get.status_code == 200
     data = resp_get.json()
-
+    user1_block = data[user_id_1][0]
+    user2_block = data[user_id_2][0]
     # Ensure both users present
     assert user_id_1 in data
     assert user_id_2 in data
 
     # The router should normalize to Z (UTC)
-    assert data[user_id_1]["mission_start_time"].endswith("Z")
-    assert data[user_id_1]["mission_end_time"].endswith("Z")
-    assert data[user_id_2]["mission_start_time"].endswith("Z")
-    assert data[user_id_2]["mission_end_time"].endswith("Z")
+    assert user1_block["mission_start_time"].endswith("Z")
+    assert user1_block["mission_end_time"].endswith("Z")
+    assert user2_block["mission_start_time"].endswith("Z")
+    assert user2_block["mission_end_time"].endswith("Z")
 
     # Contents and plan_id preserved
-    assert data[user_id_1]["plan_id"] == plan_id_1
-    assert data[user_id_2]["plan_id"] == plan_id_2
-    assert any(c["id"] == "NRs6" for c in data[user_id_1]["contents"])
-    assert any(c["id"] == "NRc30" for c in data[user_id_2]["contents"])
+    assert user1_block["plan_id"] == plan_id_1
+    assert user2_block["plan_id"] == plan_id_2
+    assert any(c["id"] == "NRs6" for c in user1_block["contents"])
+    assert any(c["id"] == "NRc30" for c in user2_block["contents"])
 
 
 def test_selected_contents_get_with_aware_times_keeps_Z(client):
@@ -411,17 +412,15 @@ def test_selected_contents_get_with_aware_times_keeps_Z(client):
     resp_get = client.get("/selected_contents/")
     assert resp_get.status_code == 200
     data = resp_get.json()
-
+    block = data[user_id][0]
     # Verify presence and 'Z' suffix
     assert user_id in data
-    assert data[user_id]["mission_start_time"].endswith("Z")
-    assert data[user_id]["mission_end_time"].endswith("Z")
+    assert block["mission_start_time"].endswith("Z")
+    assert block["mission_end_time"].endswith("Z")
 
-    # Verify exact timestamps normalized to Z
-    assert data[user_id]["mission_start_time"] == start_aware
-    assert data[user_id]["mission_end_time"] == end_aware
+    assert block["mission_start_time"] == start_aware
+    assert block["mission_end_time"] == end_aware
 
-    # Contents and plan_id preserved
-    assert data[user_id]["plan_id"] == plan_id
-    ids = {c["id"] for c in data[user_id]["contents"]}
+    assert block["plan_id"] == plan_id
+    ids = {c["id"] for c in block["contents"]}
     assert {"NRc19", "NRc53"} <= ids
