@@ -396,7 +396,7 @@ def test_existing_schedule_counting_and_generation(client, monkeypatch):
     # One existing + two newly generated = 3 plans
     assert resp.status_code == 200
     assert len(data["recommendation_plans"]) == 2
-    assert len(data["recommendation_plans"][0]["plans"]) == 4
+    assert len(data["recommendation_plans"][0]["plans"]) == 9
 
 
 def test_existing_by_day_loop_runs_on_multiple_generations(client, monkeypatch):

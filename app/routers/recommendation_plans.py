@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import and_, over
 from sqlmodel import Session, join, select
 
 from app.dependencies import get_db
@@ -114,40 +114,30 @@ def get_recommendation_plans(
         return RecommendationPlanList(recommendation_plans=response)
 
     # --------------------- If no plans exist, generate new plans ---------------------
-    # Latest SelectedContent per user
-    latest_sc_subq = (
+    # Build a subquery with row_number per user (latest first)
+    sc_rn = (
         select(
-            SelectedContent.user_id,
-            func.max(SelectedContent.mission_start_time).label(
-                "latest_mission_start_time"
-            ),
+            SelectedContent.id.label("id"),
+            SelectedContent.user_id.label("user_id"),
+            SelectedContent.contents.label("contents"),
+            SelectedContent.mission_start_time.label("mission_start_time"),
+            SelectedContent.mission_end_time.label("mission_end_time"),
+            func.row_number()
+            .over(
+                partition_by=SelectedContent.user_id,
+                order_by=SelectedContent.mission_start_time.desc(),
+            )
+            .label("rn"),
         )
-        .where(
-            SelectedContent.is_deleted == False,
-            SelectedContent.mission_start_time.is_not(None),
-        )
-        .group_by(SelectedContent.user_id)
+        .where(SelectedContent.is_deleted == False)
         .subquery()
     )
+
+    # Pick rn == 1
     selected_contents = db.exec(
         select(SelectedContent)
-        .join(
-            latest_sc_subq,
-            and_(
-                SelectedContent.user_id == latest_sc_subq.c.user_id,
-                SelectedContent.mission_start_time
-                == latest_sc_subq.c.latest_mission_start_time,
-            ),
-        )
-        .where(
-            SelectedContent.is_deleted == False,
-            # only generate for users who did not already have plans in-window
-            (
-                SelectedContent.user_id.notin_(users_with_existing_plans)
-                if users_with_existing_plans
-                else True
-            ),
-        )
+        .join(sc_rn, sc_rn.c.id == SelectedContent.id)
+        .where(sc_rn.c.rn == 1)
     ).all()
     # Resolve mission codes -> Mission UUIDs
     mission_codes: set[str] = set()
@@ -185,13 +175,46 @@ def get_recommendation_plans(
     mc_map: dict[tuple[UUID, UUID, datetime | None], MissionContent] = {}
     for mc in mc_rows:
         mc_map[(mc.user_id, mc.mission_id, mc.selection_timestamp)] = mc
-
+    # preload already-scheduled counts per (plan_id, content_id)
+    # this gives us how far we’ve progressed for each content in a plan.
+    plan_ids = [sc.id for sc in selected_contents]
+    already_counts = defaultdict(int)
+    if plan_ids:
+        rows = db.exec(
+            select(RecommendationPlan.plan_id, Recommendation.content_id, func.count())
+            .join(
+                Recommendation,
+                Recommendation.id == RecommendationPlan.recommendation_id,
+            )
+            .where(
+                RecommendationPlan.plan_id.in_(plan_ids),
+                RecommendationPlan.is_deleted == False,
+            )
+            .group_by(RecommendationPlan.plan_id, Recommendation.content_id)
+        ).all()
+        already_counts.update({(pid, cid): cnt for (pid, cid, cnt) in rows})
     new_plans = []
     for sc in selected_contents:
+        row = db.exec(
+            select(func.max(RecommendationPlan.scheduled_for)).where(
+                RecommendationPlan.user_id == sc.user_id,
+                RecommendationPlan.plan_id == sc.id,
+                RecommendationPlan.is_deleted == False,
+            )
+        ).first()
+        if row is None:
+            latest_scheduled = None
+        elif isinstance(row, tuple):
+            latest_scheduled = row[0]
+        else:
+            latest_scheduled = row
+        seq_cursor = (
+            _aware_utc(latest_scheduled) if latest_scheduled else max(now, start_dt)
+        )
         # Build windows per mission_code once
         mission_windows: dict[str, tuple[datetime, datetime]] = {}
 
-        for c in (sc.contents or []):
+        for c in sc.contents or []:
             mcode = c.get("mission_id")
             if not mcode or mcode in mission_windows:
                 continue
@@ -230,26 +253,47 @@ def get_recommendation_plans(
 
             mission_windows[mcode] = (window_start, window_end)
 
-        # Iterate the list with exact order
-        for c in (sc.contents or []):
+        # ----------------------- sequence-aware scheduling loop ----------------------
+        # We walk the list in order and only schedule the (k+1)-th occurrence
+        # if k have already been scheduled for this plan_id/content_id.
+        seen_so_far = defaultdict(int)  # per content_id within this list
+        for c in sc.contents or []:
             cid = c.get("id")
             mcode = c.get("mission_id")
             if not cid or not mcode:
                 continue
 
-            # Get window for this mission_code (fallback to request window)
-            window_start, window_end = mission_windows.get(mcode, (start_dt, end_dt))
-            if window_end <= window_start:
+            # Which occurrence is this within the list? (1-based)
+            next_occ_idx = seen_so_far[cid] + 1
+            # How many of this content_id have already been scheduled for this plan?
+            already_for_cid = already_counts[(sc.id, cid)]
+            # If we already scheduled that many, skip to the next content in sequence
+            if already_for_cid >= next_occ_idx:
+                seen_so_far[cid] += 1
                 continue
-
-            new_plans += generate_recommendation_plan(
+            # Otherwise, attempt to schedule this occurrence in the window for its mission
+            window_start, window_end = mission_windows.get(mcode, (start_dt, end_dt))
+            effective_start = max(window_start, seq_cursor)
+            if window_end <= effective_start:
+                seen_so_far[cid] += 1
+                continue
+            made = generate_recommendation_plan(
                 sc.user_id,
-                {cid: mcode},  # single item, preserves sequence
-                sc.id,         # plan_id
-                window_start,
+                {cid: mcode},  # single item to preserve exact order
+                sc.id,  # plan_id
+                effective_start,
                 window_end,
                 db,
             )
+            if made:
+                new_plans.extend(made)
+                # advance the sequence cursor so following items can't land earlier in time
+                seq_cursor = max(
+                    seq_cursor, *(_aware_utc(p.scheduled_for) for p in made)
+                )
+                already_counts[(sc.id, cid)] += 1
+            # Move to the next list position either way
+            seen_so_far[cid] += 1
 
     # Commit all new plans to the database
     db.commit()
@@ -317,6 +361,9 @@ def get_recommendation_plans(
                 mission_end_time=met_utc,
             )
         )
+    for uid, items in user_plans.items():
+        items.sort(key=lambda it: it.scheduled_for)
+
     response = [
         RecommendationPlanResponse(user_id=user_id, plans=items)
         for user_id, items in user_plans.items()
@@ -432,6 +479,7 @@ def get_notification_plans(
                 )
             )
 
+        items.sort(key=lambda it: (it.send_timestamp, it.id or ""))
         out[user_bucket.user_id] = NotificationUserBucket(contents=items)
 
     return out

@@ -38,8 +38,8 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
       { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
       { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" }
     ],
-    "mission_start_time": "2025-10-17T10:00:33.919000",
-    "mission_end_time": "2025-12-29T10:00:33.919000",
+    "mission_start_time": "2025-12-01T10:00:33.919000",
+    "mission_end_time": "2025-12-31T10:00:33.919000",
     "plan_id": "7b8a9f54-801a-4ab0-afe0-06f100441793"
   },
   "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
@@ -54,7 +54,7 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
       { "id": "NRc19", "type": "recommendation", "mission_id": "NM31" },
       { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" }
     ],
-    "mission_start_time": "2025-10-28T10:00:33.919000",
+    "mission_start_time": "2025-12-01T10:00:33.919000",
     "mission_end_time": "2025-12-31T10:00:33.919000",
     "plan_id": "3b8a9f54-701a-1ab0-afe0-05f100441796"
   }
@@ -70,13 +70,13 @@ curl "http://localhost:3200/selected_contents/"
 ### Recommendation Plan
 
 ```bash
-curl "http://localhost:3200/recommendation_plans/?start_time=2025-11-07T14:00:00&end_time=2025-11-07T18:00:00"
+curl "http://localhost:3200/recommendation_plans/?start_time=2025-12-03T17:00:00&end_time=2025-12-07T21:00:00"
 ```
 
 ### Notification Plan
 
 ```bash
-curl "http://localhost:3200/notification_plans/?start_time=2025-11-07T14:00:00&end_time=2025-11-07T18:00:00"
+curl "http://localhost:3200/notification_plans/?start_time=2025-12-03T17:00:00&end_time=2025-12-07T21:00:00"
 ```
 
 ### Updates

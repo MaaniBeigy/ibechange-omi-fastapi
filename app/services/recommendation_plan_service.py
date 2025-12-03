@@ -71,8 +71,6 @@ def generate_recommendation_plan(
         .scalars()
         .all()
     )
-    # Already scheduled recommendation_ids for this plan → skip them
-    already_rec_ids = {rp.recommendation_id for rp in existing_for_plan}
     # Count per-day across ALL existing so we respect max/day
     existing_by_day = Counter(
         _aware_utc(rp.scheduled_for).date() for rp in existing_for_plan
@@ -133,12 +131,7 @@ def generate_recommendation_plan(
         .scalars()
         .all()
     }
-    # Filter contents to those not yet scheduled for this plan
-    content_items = [
-        (cid, mission_code)
-        for cid, mission_code in content_missions.items()
-        if recommendation_lookup.get(cid) not in already_rec_ids
-    ]
+    content_items = list(content_missions.items())
     if not content_items:
         return []
 
@@ -165,4 +158,5 @@ def generate_recommendation_plan(
         db.add(rp)
         plans.append(rp)
 
+    db.flush()
     return plans
