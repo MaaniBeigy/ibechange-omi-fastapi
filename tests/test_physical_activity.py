@@ -127,19 +127,115 @@ SAMPLE = [
                     {"name": "id", "type": "string", "unit": ""},
                 ],
                 "rows": [
-                    ["12:23:00", "12:37:00", "medium", 2.68, 15, None, "2025-08-03_activity_1"],
-                    ["14:44:00", "15:00:00", "medium", 5.12, 17, None, "2025-08-03_activity_2"],
-                    ["15:17:00", "15:31:00", "medium", 2.96, 15, None, "2025-08-03_activity_3"],
-                    ["15:49:00", "16:10:00", "medium", 3.17, 22, None, "2025-08-03_activity_4"],
-                    ["16:30:00", "16:45:00", "medium", 3.01, 16, None, "2025-08-03_activity_5"],
-                    ["18:11:00", "18:29:00", "medium", 2.89, 19, None, "2025-08-03_activity_6"],
+                    [
+                        "12:23:00",
+                        "12:37:00",
+                        "medium",
+                        2.68,
+                        15,
+                        None,
+                        "2025-08-03_activity_1",
+                    ],
+                    [
+                        "14:44:00",
+                        "15:00:00",
+                        "medium",
+                        5.12,
+                        17,
+                        None,
+                        "2025-08-03_activity_2",
+                    ],
+                    [
+                        "15:17:00",
+                        "15:31:00",
+                        "medium",
+                        2.96,
+                        15,
+                        None,
+                        "2025-08-03_activity_3",
+                    ],
+                    [
+                        "15:49:00",
+                        "16:10:00",
+                        "medium",
+                        3.17,
+                        22,
+                        None,
+                        "2025-08-03_activity_4",
+                    ],
+                    [
+                        "16:30:00",
+                        "16:45:00",
+                        "medium",
+                        3.01,
+                        16,
+                        None,
+                        "2025-08-03_activity_5",
+                    ],
+                    [
+                        "18:11:00",
+                        "18:29:00",
+                        "medium",
+                        2.89,
+                        19,
+                        None,
+                        "2025-08-03_activity_6",
+                    ],
                     # duplicates (same start/end & characteristics as earlier rows):
-                    ["12:23:00", "12:37:00", "medium", 2.68, 15, None, "2025-08-03_activity_7"],
-                    ["14:44:00", "15:00:00", "medium", 5.12, 17, None, "2025-08-03_activity_8"],
-                    ["15:17:00", "15:31:00", "medium", 2.96, 15, None, "2025-08-03_activity_9"],
-                    ["15:49:00", "16:10:00", "medium", 3.17, 22, None, "2025-08-03_activity_10"],
-                    ["16:30:00", "16:45:00", "medium", 3.01, 16, None, "2025-08-03_activity_11"],
-                    ["18:11:00", "18:29:00", "medium", 2.89, 19, None, "2025-08-03_activity_12"],
+                    [
+                        "12:23:00",
+                        "12:37:00",
+                        "medium",
+                        2.68,
+                        15,
+                        None,
+                        "2025-08-03_activity_7",
+                    ],
+                    [
+                        "14:44:00",
+                        "15:00:00",
+                        "medium",
+                        5.12,
+                        17,
+                        None,
+                        "2025-08-03_activity_8",
+                    ],
+                    [
+                        "15:17:00",
+                        "15:31:00",
+                        "medium",
+                        2.96,
+                        15,
+                        None,
+                        "2025-08-03_activity_9",
+                    ],
+                    [
+                        "15:49:00",
+                        "16:10:00",
+                        "medium",
+                        3.17,
+                        22,
+                        None,
+                        "2025-08-03_activity_10",
+                    ],
+                    [
+                        "16:30:00",
+                        "16:45:00",
+                        "medium",
+                        3.01,
+                        16,
+                        None,
+                        "2025-08-03_activity_11",
+                    ],
+                    [
+                        "18:11:00",
+                        "18:29:00",
+                        "medium",
+                        2.89,
+                        19,
+                        None,
+                        "2025-08-03_activity_12",
+                    ],
                 ],
             },
         },
@@ -200,8 +296,16 @@ def test_ingest_creates_user_and_events(client):
             "2025-08-03T12:37:00.000000Z",
         )
         assert ev is not None
-        characteristics = ev.characteristics if isinstance(ev.characteristics, dict) else json.loads(ev.characteristics)
-        assert characteristics == {"average MET": 2.68, "duration": 15, "mean heart rate": None}
+        characteristics = (
+            ev.characteristics
+            if isinstance(ev.characteristics, dict)
+            else json.loads(ev.characteristics)
+        )
+        assert characteristics == {
+            "average MET": 2.68,
+            "duration": 15,
+            "mean heart rate": None,
+        }
 
         # Check the summary event (singleindicator) is stored with naive datetimes
         summary = s.exec(
@@ -210,6 +314,29 @@ def test_ingest_creates_user_and_events(client):
         assert summary is not None
         assert summary.event_start_time.tzinfo is None
         assert summary.event_end_time.tzinfo is None
+
+
+def test_unrelated_or_empty_physical_records_insert_nothing(client):
+    valid_user = SAMPLE[0]["user_uuid"]
+    records = [
+        {
+            "user_uuid": valid_user,
+            "pillar_id": "another_pillar",
+            "start_date": SAMPLE[0]["start_date"],
+            "end_date": SAMPLE[0]["end_date"],
+            "data": {},
+        },
+        {
+            "user_uuid": valid_user,
+            "pillar_id": "physical_activity",
+            "start_date": SAMPLE[0]["start_date"],
+            "end_date": SAMPLE[0]["end_date"],
+            "data": {},
+        },
+    ]
+    response = client.post("/physical_activity/", json=records)
+    assert response.status_code == 200
+    assert response.json() == {"inserted": []}
 
 
 def test_idempotent_same_payload(client):
@@ -250,12 +377,20 @@ def test_idempotent_different_characteristics_in_multiple_inserts_new_row(client
             "2025-08-03T12:37:00.000000Z",
         )
         assert ev is not None
-        characteristics = ev.characteristics if isinstance(ev.characteristics, dict) else json.loads(ev.characteristics)
+        characteristics = (
+            ev.characteristics
+            if isinstance(ev.characteristics, dict)
+            else json.loads(ev.characteristics)
+        )
         assert characteristics["duration"] in (15, 16)  # both versions present
 
         # Count how many events match the same name+times (should be 2 now)
-        start_dt = _to_naive_utc(datetime.fromisoformat("2025-08-03T12:23:00.000000+00:00"))
-        end_dt = _to_naive_utc(datetime.fromisoformat("2025-08-03T12:37:00.000000+00:00"))
+        start_dt = _to_naive_utc(
+            datetime.fromisoformat("2025-08-03T12:23:00.000000+00:00")
+        )
+        end_dt = _to_naive_utc(
+            datetime.fromisoformat("2025-08-03T12:37:00.000000+00:00")
+        )
         matches = s.exec(
             select(Event).where(
                 Event.event_name == "medium_intensity_physical_activity",

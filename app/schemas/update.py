@@ -1,76 +1,175 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
-class Event(BaseModel):
-    process_id: int
-    timestamp: Optional[datetime]
-    event_name: str
-    properties: Dict
+class ArtemisPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
 
 
-class UserFeedback(BaseModel):
-    events: List[Event]
+class ArtemisNewUser(ArtemisPayload):
+    uuid: UUID
+    username: str
+    email: str
+    personalId: Optional[str] = None
+    language: Optional[str] = None
+    enabled: bool
+    attributes: Dict[str, Any]
+    tenantName: Optional[str] = None
 
 
-class NewUser(BaseModel):
-    gender: Optional[str] = None
-    height: Optional[int] = None
-    userAge: Optional[int] = None
-    weight: Optional[int] = None
-    wearable: Optional[str] = None
-    residence: Optional[str] = None
-    enrolmentDate: Optional[str] = None
-    informedConsent: Optional[str] = None
-    recruitmentCenter: Optional[str] = None
-    level: Optional[int] = None
-    voiceRecording: Optional[str] = None
-    education: Optional[str] = None
-    digitalLiteracy: Optional[Union[int, str]] = None
-    occupation: Optional[str] = None
+class ArtemisDisabledUser(ArtemisPayload):
+    user_uuid: UUID
+    date_disabled: datetime
 
 
-class HealthHabitAssessment(BaseModel):
-    hhs: Dict
-    assessment_timestamp: Optional[datetime]
+class ArtemisSubpillar(ArtemisPayload):
+    score: float
+    colour: str
+    name: str
 
 
-class NewMission(BaseModel):
+class ArtemisHealthHabitAssessment(ArtemisPayload):
+    user_uuid: UUID
+    pillar_id: str
+    score: float
+    colour: str
+    trend: float
+    subpillars: List[ArtemisSubpillar]
+    assessment_timestamp: datetime
+
+
+class ArtemisPsychologicalAssessment(ArtemisPayload):
+    user_uuid: Optional[UUID] = None
+    pillar_id: str
+    barriers: List[str]
+    subpillar: Optional[str] = None
+    suppillar: Optional[str] = None
+    assessment_timestamp: datetime
+    answer_tasklog: Dict[str, Any]
+
+
+class ArtemisEscalationLevel(ArtemisPayload):
+    user_uuid: UUID
+    pillar_id: str
+    update_timestamp: datetime
+    level: int
+
+
+class ArtemisNewPillar(ArtemisPayload):
+    user_uuid: UUID
+    pillars: str
+
+
+class ArtemisMissionSelected(ArtemisPayload):
+    user_uuid: UUID
     mission: str
-    recommendations: List[str]
-    resources: List[str]
-    prescribed: bool
-    selection_timestamp: datetime
-    finish_timestamp: Optional[datetime] = None
-
-
-class MissionContent(BaseModel):
-    update_timestamp: datetime
-    new_missions: List[NewMission]
-
-
-class EscalationLevelCreate(BaseModel):
-    update_timestamp: datetime
-    level: int
-    pillar_id: str
-
-
-class EscalationLevelResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    update_timestamp: datetime
-    level: int
-    pillar_id: str
     created_at: datetime
+    process_id: int
+    mission_process_id: int
 
 
-class UpdateCreate(BaseModel):
-    user_feedback: Dict[str, UserFeedback]
-    new_users: Dict[str, NewUser]
-    disabled_users: Dict[str, Dict[str, datetime]]
-    health_habit_assessments: Dict[str, List[HealthHabitAssessment]]
-    new_missions_and_contents: Dict[str, MissionContent]
-    escalation_level: Optional[Dict[str, List[EscalationLevelCreate]]] = None
+class ArtemisTaskWindow(ArtemisPayload):
+    startDate: str
+    endDate: str
+
+    @model_validator(mode="after")
+    def check_order(self):
+        """Keep the source timestamps while checking interval order."""
+        start = datetime.fromisoformat(self.startDate)
+        end = datetime.fromisoformat(self.endDate)
+        if (start.tzinfo is None) != (end.tzinfo is None) or end <= start:
+            raise ValueError("Scheduled task interval is invalid")
+        return self
+
+
+class ArtemisTaskScheduledProperties(ArtemisPayload):
+    mission_id: str
+    total_steps: int
+    scheduled_for: List[ArtemisTaskWindow]
+
+    @model_validator(mode="after")
+    def check_step_count(self):
+        """Require one interval for every reported task step."""
+        if self.total_steps < 1 or len(self.scheduled_for) != self.total_steps:
+            raise ValueError("Scheduled task step count is inconsistent")
+        return self
+
+
+class ArtemisTaskStepScheduled(ArtemisPayload):
+    user_uuid: UUID
+    created_at: datetime
+    process_id: int
+    mission_process_id: int
+    properties: ArtemisTaskScheduledProperties
+
+
+class ArtemisTaskDoneProperties(ArtemisPayload):
+    mission: str
+    total_steps: int
+    finished_at: datetime
+
+
+class ArtemisTaskStepDone(ArtemisPayload):
+    user_uuid: UUID
+    created_at: datetime
+    process_id: int
+    mission_process_id: int
+    properties: ArtemisTaskDoneProperties
+
+
+class ArtemisMissionAccomplished(ArtemisPayload):
+    user_uuid: UUID
+    mission_id: str
+    created_at: datetime
+    process_id: int
+    mission_process_id: int
+
+
+class ArtemisNotificationProperties(ArtemisPayload):
+    content_id: str
+    mission_id: str
+    content_type: str
+
+    @field_validator("content_type", mode="before")
+    @classmethod
+    def normalize_content_type(cls, value):
+        """Store supported content types in lowercase."""
+        return value.lower() if isinstance(value, str) else value
+
+
+class ArtemisNotification(ArtemisPayload):
+    user_uuid: UUID
+    created_at: datetime
+    process_id: int
+    mission_process_id: int
+    properties: ArtemisNotificationProperties
+
+
+ARTEMIS_MESSAGES = {
+    "new_user": ArtemisNewUser,
+    "disabled_user": ArtemisDisabledUser,
+    "health_habit_assessments": ArtemisHealthHabitAssessment,
+    "psychological_assessments": ArtemisPsychologicalAssessment,
+    "escalation_level": ArtemisEscalationLevel,
+    "new_pillar": ArtemisNewPillar,
+    "mission_selected": ArtemisMissionSelected,
+    "task_step_scheduled": ArtemisTaskStepScheduled,
+    "task_step_done": ArtemisTaskStepDone,
+    "mission_accomplished": ArtemisMissionAccomplished,
+    "notification_sent": ArtemisNotification,
+    "notification_opened": ArtemisNotification,
+}
+
+
+def parse_artemis_message(body: Dict[str, Any]) -> tuple[str, ArtemisPayload]:
+    """Validate one Artemis message and return its type and payload."""
+    if not isinstance(body, dict) or len(body) != 1:
+        raise ValueError("Artemis message must contain exactly one event")
+    event_name, value = next(iter(body.items()))
+    schema = ARTEMIS_MESSAGES.get(event_name)
+    if schema is None:
+        raise ValueError(f"Unknown Artemis event: {event_name}")
+    return event_name, schema.model_validate(value)

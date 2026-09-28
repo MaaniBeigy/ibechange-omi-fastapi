@@ -43,9 +43,7 @@ class HealthHabitAssessment(SQLModel, table=True):
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
     hhs: Dict = Field(sa_type=JSONB)
     assessment_timestamp: Optional[datetime] = Field(default=None)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(datetime.timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
     is_deleted: bool = Field(default=False)

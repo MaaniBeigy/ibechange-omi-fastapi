@@ -1,10 +1,12 @@
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import text
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -14,6 +16,7 @@ from app.models.mission import Mission
 from app.models.recommendation import Recommendation
 from app.models.selected_content import SelectedContent
 from app.models.user import User
+from app.routers.selected_contents import list_selected_contents
 
 load_dotenv()
 
@@ -135,6 +138,104 @@ def test_create_selected_contents_creates_records(client):
         # Mission NM31 exists exactly once.
         missions = session.exec(select(Mission)).all()
         assert {m.mission_id for m in missions} == {"NM31"}
+
+
+def test_plan_id_cannot_be_reused_by_another_user(client):
+    first = _build_payload_single_user()
+    assert client.post("/selected_contents/", json=first).status_code == 200
+    other = {"10b58b39-9a4c-46ad-b98d-03dc28735e6b": next(iter(first.values()))}
+    response = client.post("/selected_contents/", json=other)
+    assert response.status_code == 409
+    assert "already exists for another user" in response.json()["detail"]
+
+
+def test_selected_content_commit_conflict_returns_409(client, monkeypatch):
+    def duplicate_commit(self):
+        raise IntegrityError("insert", {}, Exception("duplicate key"))
+
+    monkeypatch.setattr(Session, "commit", duplicate_commit)
+    response = client.post("/selected_contents/", json=_build_payload_single_user())
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Duplicate SelectedContent id"
+
+
+def test_list_selected_content_filters_deleted_rows(client):
+    payload = _build_payload_single_user()
+    assert client.post("/selected_contents/", json=payload).status_code == 200
+    user_id = next(iter(payload))
+    all_rows = client.get("/selected_contents/", params={"user_id": user_id})
+    assert all_rows.status_code == 200
+    assert len(all_rows.json()[user_id]) == 1
+    with Session(engine) as db:
+        selected = db.exec(select(SelectedContent)).one()
+        selected.is_deleted = True
+        db.commit()
+    assert client.get("/selected_contents/", params={"user_id": user_id}).json() == {}
+    included = client.get(
+        "/selected_contents/",
+        params={"user_id": user_id, "include_deleted": "true"},
+    )
+    assert included.status_code == 200
+    assert included.json()[user_id][0]["plan_id"] == payload[user_id]["plan_id"]
+
+
+def test_selected_content_update_adds_mission_to_existing_resource(client):
+    payload = _build_payload_single_user()
+    user_id = next(iter(payload))
+    first = payload[user_id]
+    assert client.post("/selected_contents/", json=payload).status_code == 200
+    changed = {
+        user_id: {
+            **first,
+            "contents": [{"id": "NRs6", "type": "resource", "mission_id": "NM32"}],
+        }
+    }
+    assert client.post("/selected_contents/", json=changed).status_code == 200
+    with Session(engine) as db:
+        selected = db.exec(select(SelectedContent)).one()
+        assert selected.contents == changed[user_id]["contents"]
+        resource = db.exec(
+            select(Recommendation).where(Recommendation.content_id == "NRs6")
+        ).one()
+        assert resource.missions == ["NM31", "NM32"]
+    another_plan = {
+        user_id: {
+            **changed[user_id],
+            "plan_id": str(uuid.uuid4()),
+        }
+    }
+    assert client.post("/selected_contents/", json=another_plan).status_code == 200
+    with Session(engine) as db:
+        assert db.exec(
+            select(Recommendation).where(Recommendation.content_id == "NRs6")
+        ).one().missions == ["NM31", "NM32"]
+
+
+def test_selected_content_list_formats_aware_and_missing_times():
+    user_id = uuid.uuid4()
+    selected = SelectedContent(
+        user_id=user_id,
+        contents=[],
+        mission_start_time=datetime(
+            2026, 9, 28, 9, tzinfo=timezone(timedelta(hours=2))
+        ),
+        mission_end_time=None,
+    )
+
+    class Rows:
+        def exec(self, statement):
+            return SimpleNamespace(all=lambda: [selected])
+
+    row = list_selected_contents(Rows(), user_id=None, include_deleted=True)[
+        str(user_id)
+    ][0]
+    assert row["mission_start_time"] == "2026-09-28T07:00:00Z"
+    assert row["mission_end_time"] is None
+    selected.mission_start_time = datetime(2026, 9, 28, 7)
+    row = list_selected_contents(Rows(), user_id=None, include_deleted=True)[
+        str(user_id)
+    ][0]
+    assert row["mission_start_time"] == "2026-09-28T07:00:00Z"
 
 
 def test_posting_same_payload_twice_is_idempotent_1(client):

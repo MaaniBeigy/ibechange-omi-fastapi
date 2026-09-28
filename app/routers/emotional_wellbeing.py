@@ -99,26 +99,25 @@ def ingest_emotional_wellbeing(
                     end_naive,
                     canon,
                 )
-                if local_key not in seen_keys:
-                    seen_keys.add(local_key)
-                    ev = _insert_event(
-                        db,
-                        user_uuid,
-                        name=evt["event_name"],
-                        start=evt["start_dt"],
-                        end=evt["end_dt"],
-                        characteristics=evt["characteristics"],
-                        process_id=None,
+                seen_keys.add(local_key)
+                ev = _insert_event(
+                    db,
+                    user_uuid,
+                    name=evt["event_name"],
+                    start=evt["start_dt"],
+                    end=evt["end_dt"],
+                    characteristics=evt["characteristics"],
+                    process_id=None,
+                )
+                if ev:
+                    inserted.append(
+                        {
+                            "user_id": str(user_uuid),
+                            "event_name": ev.event_name,
+                            "start_time": _iso_utc(ev.event_start_time),
+                            "end_time": _iso_utc(ev.event_end_time),
+                        }
                     )
-                    if ev:
-                        inserted.append(
-                            {
-                                "user_id": str(user_uuid),
-                                "event_name": ev.event_name,
-                                "start_time": _iso_utc(ev.event_start_time),
-                                "end_time": _iso_utc(ev.event_end_time),
-                            }
-                        )
 
         # ----------------------------- multipleindicators ----------------------------
         if rec.data.multipleindicators and rec.data.multipleindicators.rows:

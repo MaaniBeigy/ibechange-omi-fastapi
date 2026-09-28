@@ -13,6 +13,7 @@ from app.dependencies import get_db
 from app.main import app
 from app.models.event import Event
 from app.models.user import User
+from app.routers.emotional_wellbeing import _extract_sleep_event
 
 load_dotenv()
 
@@ -247,6 +248,63 @@ def test_ingest_creates_user_and_events_and_returns_inserted(client):
         assert ev2 is not None
         assert ev2.event_start_time.tzinfo is None
         assert ev2.event_end_time.tzinfo is None
+
+
+def test_sleep_event_needs_type_and_both_times():
+    assert (
+        _extract_sleep_event(
+            {"type_sleep": "", "bedtime_start": "time", "bedtime_end": "time"}
+        )
+        is None
+    )
+    assert (
+        _extract_sleep_event(
+            {"type_sleep": "sleep", "bedtime_start": "", "bedtime_end": "time"}
+        )
+        is None
+    )
+    assert (
+        _extract_sleep_event({"type_sleep": "sleep", "bedtime_start": "time"}) is None
+    )
+
+
+def test_unrelated_or_empty_emotional_records_insert_nothing(client):
+    valid_user = SAMPLE[0]["user_uuid"]
+    records = [
+        {
+            "user_uuid": valid_user,
+            "pillar_id": "another_pillar",
+            "start_date": SAMPLE[0]["start_date"],
+            "end_date": SAMPLE[0]["end_date"],
+            "data": {},
+        },
+        {
+            "user_uuid": valid_user,
+            "pillar_id": "emotional_wellbeing",
+            "start_date": SAMPLE[0]["start_date"],
+            "end_date": SAMPLE[0]["end_date"],
+            "data": {},
+        },
+        {
+            "user_uuid": valid_user,
+            "pillar_id": "emotional_wellbeing",
+            "start_date": SAMPLE[0]["start_date"],
+            "end_date": SAMPLE[0]["end_date"],
+            "data": {
+                "singleindicator": {
+                    "vars": [{"name": "type_sleep"}],
+                    "rows": [[""]],
+                },
+                "multipleindicators": {
+                    "vars": [{"name": "type_sleep"}],
+                    "rows": [[""]],
+                },
+            },
+        },
+    ]
+    response = client.post("/emotional_wellbeing/", json=records)
+    assert response.status_code == 200
+    assert response.json() == {"inserted": []}
 
 
 def test_idempotent_same_payload(client):

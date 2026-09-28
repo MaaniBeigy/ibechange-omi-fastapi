@@ -15,6 +15,7 @@ class RecommendationPlan(SQLModel, table=True):
             "scheduled_for",
             name="uq_plan_recommendation_time",
         ),
+        UniqueConstraint("plan_id", "occurrence_key", name="uq_plan_occurrence_key"),
     )
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
@@ -24,6 +25,12 @@ class RecommendationPlan(SQLModel, table=True):
         default=None, index=True, foreign_key="Mission.id"
     )
     scheduled_for: datetime
+    occurrence_index: Optional[int] = Field(default=None)
+    occurrence_key: Optional[str] = Field(default=None)
+    content_type: Optional[str] = Field(default=None)
+    mission_process_id: Optional[int] = Field(default=None)
+    deadline: Optional[datetime] = Field(default=None)
+    policy_version: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     modified_at: Optional[datetime] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)

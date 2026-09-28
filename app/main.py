@@ -12,8 +12,8 @@ from app.routers import (
     recommendation_plans,
     recommendations,
     selected_contents,
-    updates,
 )
+from app.services.rl_policy import load_policy_artifacts
 
 load_dotenv()
 
@@ -37,6 +37,7 @@ def create_db_and_tables():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    load_policy_artifacts()
     create_db_and_tables()
     yield
 
@@ -46,7 +47,6 @@ app = FastAPI(title="OMI Recommendation Timing Module", lifespan=lifespan)
 # Include routers
 app.include_router(recommendations.router)
 app.include_router(missions.router)
-app.include_router(updates.router)
 app.include_router(selected_contents.router)
 app.include_router(recommendation_plans.router_recommendation_plans)
 app.include_router(recommendation_plans.router_notification_plans)

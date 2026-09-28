@@ -1,0 +1,2507 @@
+--------------------------------------------------
+[
+  2026-09-28 10: 19: 05
+] --- Message #280 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162618
+  all headers : {'subscription': 'debug-sub', 'content-length': '562', 'message-id': '8162839,
+  8162618', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790325801185'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 52.3,
+    "colour": "orange",
+    "trend": 0,
+    "subpillars": [
+      {
+        "score": 5.0,
+        "colour": "red",
+        "name": "emotional distress"
+      },
+      {
+        "score": 9.0,
+        "colour": "red",
+        "name": "perceived stress"
+      },
+      {
+        "score": 3.0,
+        "colour": "red",
+        "name": "anxiety"
+      },
+      {
+        "score": 3.0,
+        "colour": "red",
+        "name": "depression"
+      },
+      {
+        "score": 2.0,
+        "colour": "red",
+        "name": "social support"
+      },
+      {
+        "score": 1.0,
+        "colour": "red",
+        "name": "insomnia"
+      }
+    ],
+    "assessment_timestamp": "2026-09-25T08:43:21.181212",
+    "user_uuid": "670437ee-cb50-4063-a38f-93adb0ee5de6",
+    "pillar_id": "EO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 52.3, 'colour': 'orange', 'trend': 0, 'subpillars': [
+      {'score': 5.0, 'colour': 'red', 'name': 'emotional distress'
+      },
+      {'score': 9.0, 'colour': 'red', 'name': 'perceived stress'
+      },
+      {'score': 3.0, 'colour': 'red', 'name': 'anxiety'
+      },
+      {'score': 3.0, 'colour': 'red', 'name': 'depression'
+      },
+      {'score': 2.0, 'colour': 'red', 'name': 'social support'
+      },
+      {'score': 1.0, 'colour': 'red', 'name': 'insomnia'
+      }
+    ], 'assessment_timestamp': '2026-09-25T08: 43: 21.181212', 'user_uuid': '670437ee-cb50-4063-a38f-93adb0ee5de6', 'pillar_id': 'EO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #281 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162620
+  all headers : {'subscription': 'debug-sub', 'content-length': '221', 'message-id': '8162839,
+  8162620', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790325829658'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 65.0,
+    "colour": "orange",
+    "trend": 0,
+    "subpillars": [],
+    "assessment_timestamp": "2026-09-25T08:43:49.654674",
+    "user_uuid": "670437ee-cb50-4063-a38f-93adb0ee5de6",
+    "pillar_id": "AO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 65.0, 'colour': 'orange', 'trend': 0, 'subpillars': [], 'assessment_timestamp': '2026-09-25T08: 43: 49.654674', 'user_uuid': '670437ee-cb50-4063-a38f-93adb0ee5de6', 'pillar_id': 'AO'
+  }
+}
+--------------------------------------------------
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #283 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162624
+  all headers : {'subscription': 'debug-sub', 'content-length': '638', 'message-id': '8162839,
+  8162624', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790326018440'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "670437ee-cb50-4063-a38f-93adb0ee5de6",
+    "username": "george.alecu@simavi.ro",
+    "email": "george.alecu@simavi.ro",
+    "personalId": "test_simavi_1",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 35,
+      "wearable": "yes",
+      "personalWearableDevice": "no",
+      "voiceRecording": "yes",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "university",
+      "digitalLiteracy": 3,
+      "occupation": "employed",
+      "height": 172,
+      "weight": 83,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '670437ee-cb50-4063-a38f-93adb0ee5de6', 'username': 'george.alecu@simavi.ro', 'email': 'george.alecu@simavi.ro', 'personalId': 'test_simavi_1', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 35, 'wearable': 'yes', 'personalWearableDevice': 'no', 'voiceRecording': 'yes', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'university', 'digitalLiteracy': 3, 'occupation': 'employed', 'height': 172, 'weight': 83, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #293 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162644
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162644', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790328983230'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "42225164-d2d7-4530-8f1f-30fbad8881f0",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '42225164-d2d7-4530-8f1f-30fbad8881f0', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #294 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162646
+  all headers : {'subscription': 'debug-sub', 'content-length': '654', 'message-id': '8162839,
+  8162646', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332228772'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "username": "alexandra.munteanu+001@simavi.ro",
+    "email": "alexandra.munteanu+001@simavi.ro",
+    "personalId": "M001",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "female",
+      "sex": "female",
+      "userAge": 26,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-09-22",
+      "recruitmentCenter": "ICO",
+      "education": "master-degree",
+      "digitalLiteracy": 2,
+      "occupation": "employed",
+      "height": 178,
+      "weight": 56,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'username': 'alexandra.munteanu+001@simavi.ro', 'email': 'alexandra.munteanu+001@simavi.ro', 'personalId': 'M001', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'female', 'sex': 'female', 'userAge': 26, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-09-22', 'recruitmentCenter': 'ICO', 'education': 'master-degree', 'digitalLiteracy': 2, 'occupation': 'employed', 'height': 178, 'weight': 56, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #300 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162658
+  all headers : {'subscription': 'debug-sub', 'content-length': '725', 'message-id': '8162839,
+  8162658', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332672195'
+}
+  body (json) : {
+  "psychological_assessments": {
+    "pillar_id": "SO",
+    "barriers": [
+      "",
+      ""
+    ],
+    "suppillar": null,
+    "assessment_timestamp": "2026-09-25T10:37:52.192007",
+    "answer_tasklog": {
+      "data": {
+        "answers": [
+          {
+            "code": "8c9f963b89a74ec89e4b7a554b6419b1",
+            "data": [
+              {
+                "data": "Intender"
+              }
+            ],
+            "questionData": null,
+            "value": "3386e8bd-a804-4e56-aaec-5d716930b074"
+          },
+          {
+            "code": "ee0b79f047124d1393e9c7afcc540326",
+            "data": [
+              {
+                "data": "test"
+              },
+              {
+                "data": "social_opportunity"
+              }
+            ],
+            "questionData": null,
+            "value": [
+              "96d99e01-f44e-455e-9cad-2789712926db",
+              "3f11531b-dacd-4910-b471-12c1cc6dea51"
+            ]
+          }
+        ]
+      },
+      "draft": false,
+      "eventEndDate": "2026-10-02T10:36:11.514+0000",
+      "eventStartDate": "2026-09-25T10:36:11.514+0000",
+      "id": 1838,
+      "logDate": "2026-09-25T13:37:51.875+0300"
+    }
+  }
+}
+  body(dict) : {'psychological_assessments': {'pillar_id': 'SO', 'barriers': ['', ''
+    ], 'suppillar': None, 'assessment_timestamp': '2026-09-25T10: 37: 52.192007', 'answer_tasklog': {'data': {'answers': [
+          {'code': '8c9f963b89a74ec89e4b7a554b6419b1', 'data': [
+              {'data': 'Intender'
+              }
+            ], 'questionData': None, 'value': '3386e8bd-a804-4e56-aaec-5d716930b074'
+          },
+          {'code': 'ee0b79f047124d1393e9c7afcc540326', 'data': [
+              {'data': 'test'
+              },
+              {'data': 'social_opportunity'
+              }
+            ], 'questionData': None, 'value': ['96d99e01-f44e-455e-9cad-2789712926db', '3f11531b-dacd-4910-b471-12c1cc6dea51'
+            ]
+          }
+        ]
+      }, 'draft': False, 'eventEndDate': '2026-10-02T10: 36: 11.514+0000', 'eventStartDate': '2026-09-25T10: 36: 11.514+0000', 'id': 1838, 'logDate': '2026-09-25T13: 37: 51.875+0300'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #301 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162660
+  all headers : {'subscription': 'debug-sub', 'content-length': '763', 'message-id': '8162839,
+  8162660', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332683220'
+}
+  body (json) : {
+  "psychological_assessments": {
+    "pillar_id": "AO",
+    "barriers": [
+      "",
+      ""
+    ],
+    "suppillar": null,
+    "assessment_timestamp": "2026-09-25T10:38:03.216298",
+    "answer_tasklog": {
+      "data": {
+        "answers": [
+          {
+            "code": "7db1021b1a304858891a27be280b61d7",
+            "data": [
+              {
+                "data": "intender"
+              }
+            ],
+            "questionData": null,
+            "value": "47404872-964e-4544-8bd0-5daa9e53cc94"
+          },
+          {
+            "code": "2dc48af21b384fc095117d85f3e76ade",
+            "data": [
+              {
+                "data": "automatic_motivation"
+              },
+              {
+                "data": "reflective_motivation,social_opportunity"
+              }
+            ],
+            "questionData": null,
+            "value": [
+              "317090f6-c51a-4f8b-8cf3-19d51a7a56d1",
+              "17671edd-32ee-4f8d-8723-1256cd8d112b"
+            ]
+          }
+        ]
+      },
+      "draft": false,
+      "eventEndDate": "2026-10-02T10:36:11.514+0000",
+      "eventStartDate": "2026-09-25T10:36:11.514+0000",
+      "id": 1839,
+      "logDate": "2026-09-25T13:38:02.868+0300"
+    }
+  }
+}
+  body(dict) : {'psychological_assessments': {'pillar_id': 'AO', 'barriers': ['', ''
+    ], 'suppillar': None, 'assessment_timestamp': '2026-09-25T10: 38: 03.216298', 'answer_tasklog': {'data': {'answers': [
+          {'code': '7db1021b1a304858891a27be280b61d7', 'data': [
+              {'data': 'intender'
+              }
+            ], 'questionData': None, 'value': '47404872-964e-4544-8bd0-5daa9e53cc94'
+          },
+          {'code': '2dc48af21b384fc095117d85f3e76ade', 'data': [
+              {'data': 'automatic_motivation'
+              },
+              {'data': 'reflective_motivation,social_opportunity'
+              }
+            ], 'questionData': None, 'value': ['317090f6-c51a-4f8b-8cf3-19d51a7a56d1', '17671edd-32ee-4f8d-8723-1256cd8d112b'
+            ]
+          }
+        ]
+      }, 'draft': False, 'eventEndDate': '2026-10-02T10: 36: 11.514+0000', 'eventStartDate': '2026-09-25T10: 36: 11.514+0000', 'id': 1839, 'logDate': '2026-09-25T13: 38: 02.868+0300'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #302 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162662
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162662', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332823668'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #303 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162664
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162664', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332824017'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #304 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162666
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162666', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332829628'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #305 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162668
+  all headers : {'subscription': 'debug-sub', 'content-length': '186', 'message-id': '8162839,
+  8162668', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332833511'
+}
+  body (json) : {
+  "mission_selected": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "mission": "SM149",
+    "created_at": "2026-09-25T10:40:33.508636",
+    "process_id": 908,
+    "mission_process_id": 3113
+  }
+}
+  body(dict) : {'mission_selected': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'mission': 'SM149', 'created_at': '2026-09-25T10: 40: 33.508636', 'process_id': 908, 'mission_process_id': 3113
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #306 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162670
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162670', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332841881'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:40:41.877668",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 40: 41.877668', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #307 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162672
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162672', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332854514'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:40:54.508741",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 40: 54.508741', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #308 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162674
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162674', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332865074'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:05.069512",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 05.069512', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #309 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162676
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162676', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332875096'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:15.091615",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 15.091615', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #310 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162678
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162678', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332884801'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:24.795621",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 24.795621', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #311 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162680
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162680', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332894308'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:34.301509",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 34.301509', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #312 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162682
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162682', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332904389'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:44.383507",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 44.383507', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #313 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162684
+  all headers : {'subscription': 'debug-sub', 'content-length': '669', 'message-id': '8162839,
+  8162684', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332907358'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "635e6c10-dbe5-411d-a01b-75033c56a24d",
+    "username": "alexandra.munteanu+002@simavi.ro",
+    "email": "alexandra.munteanu+002@simavi.ro",
+    "personalId": "M002",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "female",
+      "sex": "female",
+      "userAge": 28,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-09-25",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 2,
+      "occupation": "employed-part-time",
+      "height": 167,
+      "weight": 56,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "colorectal-cancer"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '635e6c10-dbe5-411d-a01b-75033c56a24d', 'username': 'alexandra.munteanu+002@simavi.ro', 'email': 'alexandra.munteanu+002@simavi.ro', 'personalId': 'M002', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'female', 'sex': 'female', 'userAge': 28, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-09-25', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 2, 'occupation': 'employed-part-time', 'height': 167, 'weight': 56, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'colorectal-cancer'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #314 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162686
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162686', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332915229'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:41:55.223606",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 41: 55.223606', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #315 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162688
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162688', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332925776'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:42:05.771424",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 42: 05.771424', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #316 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162690
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162690', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332936162'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:42:16.157551",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 42: 16.157551', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #317 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162692
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162692', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790332945828'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T10:42:25.825155",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T10: 42: 25.825155', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+[
+  2026-09-28 10: 19: 05
+] --- Message #324 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162706
+  all headers : {'subscription': 'debug-sub', 'content-length': '677', 'message-id': '8162839,
+  8162706', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790333425764'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "0ff15cbc-234d-4c94-990f-f44202d849de",
+    "username": "alexandra.munteanu+003@simavi.ro",
+    "email": "alexandra.munteanu+003@simavi.ro",
+    "personalId": "M003",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "female",
+      "sex": "female",
+      "userAge": 28,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-09-25",
+      "recruitmentCenter": "ICO",
+      "education": "master-degree",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 156,
+      "weight": 46,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "colorectal-cancer"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '0ff15cbc-234d-4c94-990f-f44202d849de', 'username': 'alexandra.munteanu+003@simavi.ro', 'email': 'alexandra.munteanu+003@simavi.ro', 'personalId': 'M003', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'female', 'sex': 'female', 'userAge': 28, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-09-25', 'recruitmentCenter': 'ICO', 'education': 'master-degree', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 156, 'weight': 46, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'colorectal-cancer'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #329 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162716
+  all headers : {'subscription': 'debug-sub', 'content-length': '605', 'message-id': '8162839,
+  8162716', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334185457'
+}
+  body (json) : {
+  "task_step_scheduled": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:05.364403",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission_id": "SM149",
+      "total_steps": 5,
+      "scheduled_for": [
+        {
+          "startDate": "2026-09-25T09:00:00",
+          "endDate": "2026-09-26T09:00:00"
+        },
+        {
+          "startDate": "2026-09-26T09:00:00",
+          "endDate": "2026-09-27T09:00:00"
+        },
+        {
+          "startDate": "2026-09-27T09:00:00",
+          "endDate": "2026-09-28T09:00:00"
+        },
+        {
+          "startDate": "2026-09-28T09:00:00",
+          "endDate": "2026-09-29T09:00:00"
+        },
+        {
+          "startDate": "2026-09-29T09:00:00",
+          "endDate": "2026-09-30T09:00:00"
+        }
+      ]
+    }
+  }
+}
+  body(dict) : {'task_step_scheduled': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 05.364403', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission_id': 'SM149', 'total_steps': 5, 'scheduled_for': [
+        {'startDate': '2026-09-25T09: 00: 00', 'endDate': '2026-09-26T09: 00: 00'
+        },
+        {'startDate': '2026-09-26T09: 00: 00', 'endDate': '2026-09-27T09: 00: 00'
+        },
+        {'startDate': '2026-09-27T09: 00: 00', 'endDate': '2026-09-28T09: 00: 00'
+        },
+        {'startDate': '2026-09-28T09: 00: 00', 'endDate': '2026-09-29T09: 00: 00'
+        },
+        {'startDate': '2026-09-29T09: 00: 00', 'endDate': '2026-09-30T09: 00: 00'
+        }
+      ]
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #330 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162718
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162718', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334190009'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:10.005465",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission": "SM149",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T11:03:10.005484"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 10.005465', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission': 'SM149', 'total_steps': 5, 'finished_at': '2026-09-25T11: 03: 10.005484'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #331 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162720
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162720', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334194447'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:14.444485",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission": "SM149",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T11:03:14.444500"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 14.444485', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission': 'SM149', 'total_steps': 5, 'finished_at': '2026-09-25T11: 03: 14.444500'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #332 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162722
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162722', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334196127'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:16.123886",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission": "SM149",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T11:03:16.123905"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 16.123886', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission': 'SM149', 'total_steps': 5, 'finished_at': '2026-09-25T11: 03: 16.123905'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #333 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162724
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162724', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334197775'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:17.772603",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission": "SM149",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T11:03:17.772615"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 17.772603', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission': 'SM149', 'total_steps': 5, 'finished_at': '2026-09-25T11: 03: 17.772615'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #334 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162726
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162726', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334199279'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "created_at": "2026-09-25T11:03:19.275906",
+    "process_id": 908,
+    "mission_process_id": 3113,
+    "properties": {
+      "mission": "SM149",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T11:03:19.275938"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'created_at': '2026-09-25T11: 03: 19.275906', 'process_id': 908, 'mission_process_id': 3113, 'properties': {'mission': 'SM149', 'total_steps': 5, 'finished_at': '2026-09-25T11: 03: 19.275938'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #335 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162728
+  all headers : {'subscription': 'debug-sub', 'content-length': '193', 'message-id': '8162839,
+  8162728', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334206008'
+}
+  body (json) : {
+  "mission_accomplished": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "mission_id": "SM149",
+    "created_at": "2026-09-25T11:03:25.998433",
+    "process_id": 908,
+    "mission_process_id": 3113
+  }
+}
+  body(dict) : {'mission_accomplished': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'mission_id': 'SM149', 'created_at': '2026-09-25T11: 03: 25.998433', 'process_id': 908, 'mission_process_id': 3113
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #336 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162730
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162730', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334272849'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "AO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'AO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #337 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162732
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162732', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334273164'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "AO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'AO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #338 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162734
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162734', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334278073'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "AO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'AO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #339 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162736
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162736', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334577535'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #340 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162738
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162738', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334577989'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #341 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162740
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162740', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334581617'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "SO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #342 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162742
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162742', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334610879'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "EO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'EO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #343 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162744
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162744', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790334611432'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "240ff6f3-d28c-4107-80a0-eee739faee79",
+    "pillars": "EO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '240ff6f3-d28c-4107-80a0-eee739faee79', 'pillars': 'EO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #344 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162746
+  all headers : {'subscription': 'debug-sub', 'content-length': '672', 'message-id': '8162839,
+  8162746', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790335437753'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "fbe00ab2-e45f-4f48-9a2c-74a3c8c13720",
+    "username": "alexandra.munteanu+004@simavi.ro",
+    "email": "alexandra.munteanu+004@simavi.ro",
+    "personalId": "M004",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "female",
+      "sex": "female",
+      "userAge": 28,
+      "wearable": "yes",
+      "personalWearableDevice": "yes",
+      "voiceRecording": "yes",
+      "enrolmentDate": "2026-09-17",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 156,
+      "weight": 46,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "colorectal-cancer"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': 'fbe00ab2-e45f-4f48-9a2c-74a3c8c13720', 'username': 'alexandra.munteanu+004@simavi.ro', 'email': 'alexandra.munteanu+004@simavi.ro', 'personalId': 'M004', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'female', 'sex': 'female', 'userAge': 28, 'wearable': 'yes', 'personalWearableDevice': 'yes', 'voiceRecording': 'yes', 'enrolmentDate': '2026-09-17', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 156, 'weight': 46, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'colorectal-cancer'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #349 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162756
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162756', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790339475010'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #355 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162768
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162768', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340405089'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #356 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162770
+  all headers : {'subscription': 'debug-sub', 'content-length': '221', 'message-id': '8162839,
+  8162770', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340440403'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 65.0,
+    "colour": "orange",
+    "trend": 0,
+    "subpillars": [],
+    "assessment_timestamp": "2026-09-25T12:47:20.400303",
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillar_id": "AO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 65.0, 'colour': 'orange', 'trend': 0, 'subpillars': [], 'assessment_timestamp': '2026-09-25T12: 47: 20.400303', 'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillar_id': 'AO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #357 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162772
+  all headers : {'subscription': 'debug-sub', 'content-length': '271', 'message-id': '8162839,
+  8162772', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340497028'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 90.0,
+    "colour": "green",
+    "trend": 0,
+    "subpillars": [
+      {
+        "score": 4464.0,
+        "colour": "green",
+        "name": "MET"
+      }
+    ],
+    "assessment_timestamp": "2026-09-25T12:48:17.025592",
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillar_id": "PO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 90.0, 'colour': 'green', 'trend': 0, 'subpillars': [
+      {'score': 4464.0, 'colour': 'green', 'name': 'MET'
+      }
+    ], 'assessment_timestamp': '2026-09-25T12: 48: 17.025592', 'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillar_id': 'PO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #358 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162774
+  all headers : {'subscription': 'debug-sub', 'content-length': '562', 'message-id': '8162839,
+  8162774', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340527398'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 70.5,
+    "colour": "green",
+    "trend": 0,
+    "subpillars": [
+      {
+        "score": 10.0,
+        "colour": "red",
+        "name": "emotional distress"
+      },
+      {
+        "score": 9.0,
+        "colour": "red",
+        "name": "perceived stress"
+      },
+      {
+        "score": 4.0,
+        "colour": "red",
+        "name": "anxiety"
+      },
+      {
+        "score": 4.0,
+        "colour": "red",
+        "name": "depression"
+      },
+      {
+        "score": 2.0,
+        "colour": "red",
+        "name": "social support"
+      },
+      {
+        "score": 2.0,
+        "colour": "red",
+        "name": "insomnia"
+      }
+    ],
+    "assessment_timestamp": "2026-09-25T12:48:47.394919",
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillar_id": "EO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 70.5, 'colour': 'green', 'trend': 0, 'subpillars': [
+      {'score': 10.0, 'colour': 'red', 'name': 'emotional distress'
+      },
+      {'score': 9.0, 'colour': 'red', 'name': 'perceived stress'
+      },
+      {'score': 4.0, 'colour': 'red', 'name': 'anxiety'
+      },
+      {'score': 4.0, 'colour': 'red', 'name': 'depression'
+      },
+      {'score': 2.0, 'colour': 'red', 'name': 'social support'
+      },
+      {'score': 2.0, 'colour': 'red', 'name': 'insomnia'
+      }
+    ], 'assessment_timestamp': '2026-09-25T12: 48: 47.394919', 'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillar_id': 'EO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #359 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162776
+  all headers : {'subscription': 'debug-sub', 'content-length': '221', 'message-id': '8162839,
+  8162776', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340541640'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 50.0,
+    "colour": "orange",
+    "trend": 0,
+    "subpillars": [],
+    "assessment_timestamp": "2026-09-25T12:49:01.635920",
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillar_id": "SO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 50.0, 'colour': 'orange', 'trend': 0, 'subpillars': [], 'assessment_timestamp': '2026-09-25T12: 49: 01.635920', 'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillar_id': 'SO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #360 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162778
+  all headers : {'subscription': 'debug-sub', 'content-length': '780', 'message-id': '8162839,
+  8162778', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340563647'
+}
+  body (json) : {
+  "health_habit_assessments": {
+    "score": 17.9,
+    "colour": "red",
+    "trend": 0,
+    "subpillars": [
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "fruit"
+      },
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "vegetables"
+      },
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "grains"
+      },
+      {
+        "score": 0.0,
+        "colour": "red",
+        "name": "processed food"
+      },
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "bakery"
+      },
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "red meat"
+      },
+      {
+        "score": 0.0,
+        "colour": "red",
+        "name": "processed meat"
+      },
+      {
+        "score": 0.5,
+        "colour": "orange",
+        "name": "sweetened beverages"
+      },
+      {
+        "score": 29.6,
+        "colour": "orange",
+        "name": "bmi"
+      },
+      {
+        "score": 0.0,
+        "colour": "red",
+        "name": "Alcohol"
+      }
+    ],
+    "assessment_timestamp": "2026-09-25T12:49:23.642932",
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillar_id": "NO"
+  }
+}
+  body(dict) : {'health_habit_assessments': {'score': 17.9, 'colour': 'red', 'trend': 0, 'subpillars': [
+      {'score': 0.5, 'colour': 'orange', 'name': 'fruit'
+      },
+      {'score': 0.5, 'colour': 'orange', 'name': 'vegetables'
+      },
+      {'score': 0.5, 'colour': 'orange', 'name': 'grains'
+      },
+      {'score': 0.0, 'colour': 'red', 'name': 'processed food'
+      },
+      {'score': 0.5, 'colour': 'orange', 'name': 'bakery'
+      },
+      {'score': 0.5, 'colour': 'orange', 'name': 'red meat'
+      },
+      {'score': 0.0, 'colour': 'red', 'name': 'processed meat'
+      },
+      {'score': 0.5, 'colour': 'orange', 'name': 'sweetened beverages'
+      },
+      {'score': 29.6, 'colour': 'orange', 'name': 'bmi'
+      },
+      {'score': 0.0, 'colour': 'red', 'name': 'Alcohol'
+      }
+    ], 'assessment_timestamp': '2026-09-25T12: 49: 23.642932', 'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillar_id': 'NO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #361 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162780
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162780', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340822515'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #362 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162782
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162782', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790340986437'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #368 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162794
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162794', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790341535090'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "7575c349-0522-4592-b4a0-c271bfa1157e",
+    "created_at": "2026-09-25T13:05:35.082661",
+    "process_id": 799,
+    "mission_process_id": 2746,
+    "properties": {
+      "mission": "EM137",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T13:05:35.082707"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '7575c349-0522-4592-b4a0-c271bfa1157e', 'created_at': '2026-09-25T13: 05: 35.082661', 'process_id': 799, 'mission_process_id': 2746, 'properties': {'mission': 'EM137', 'total_steps': 5, 'finished_at': '2026-09-25T13: 05: 35.082707'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #369 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162796
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162796', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790341535125'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "7575c349-0522-4592-b4a0-c271bfa1157e",
+    "created_at": "2026-09-25T13:05:35.083905",
+    "process_id": 799,
+    "mission_process_id": 2746,
+    "properties": {
+      "mission": "EM137",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T13:05:35.083920"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '7575c349-0522-4592-b4a0-c271bfa1157e', 'created_at': '2026-09-25T13: 05: 35.083905', 'process_id': 799, 'mission_process_id': 2746, 'properties': {'mission': 'EM137', 'total_steps': 5, 'finished_at': '2026-09-25T13: 05: 35.083920'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #370 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162798
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162798', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790341535139'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "7575c349-0522-4592-b4a0-c271bfa1157e",
+    "created_at": "2026-09-25T13:05:35.084800",
+    "process_id": 799,
+    "mission_process_id": 2746,
+    "properties": {
+      "mission": "EM137",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T13:05:35.084839"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '7575c349-0522-4592-b4a0-c271bfa1157e', 'created_at': '2026-09-25T13: 05: 35.084800', 'process_id': 799, 'mission_process_id': 2746, 'properties': {'mission': 'EM137', 'total_steps': 5, 'finished_at': '2026-09-25T13: 05: 35.084839'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #371 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162800
+  all headers : {'subscription': 'debug-sub', 'content-length': '263', 'message-id': '8162839,
+  8162800', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790341535139'
+}
+  body (json) : {
+  "task_step_done": {
+    "user_uuid": "7575c349-0522-4592-b4a0-c271bfa1157e",
+    "created_at": "2026-09-25T13:05:35.085791",
+    "process_id": 799,
+    "mission_process_id": 2746,
+    "properties": {
+      "mission": "EM137",
+      "total_steps": 5,
+      "finished_at": "2026-09-25T13:05:35.085804"
+    }
+  }
+}
+  body(dict) : {'task_step_done': {'user_uuid': '7575c349-0522-4592-b4a0-c271bfa1157e', 'created_at': '2026-09-25T13: 05: 35.085791', 'process_id': 799, 'mission_process_id': 2746, 'properties': {'mission': 'EM137', 'total_steps': 5, 'finished_at': '2026-09-25T13: 05: 35.085804'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #372 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162802
+  all headers : {'subscription': 'debug-sub', 'content-length': '193', 'message-id': '8162839,
+  8162802', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790341535152'
+}
+  body (json) : {
+  "mission_accomplished": {
+    "user_uuid": "7575c349-0522-4592-b4a0-c271bfa1157e",
+    "mission_id": "EM137",
+    "created_at": "2026-09-25T13:05:35.147873",
+    "process_id": 799,
+    "mission_process_id": 2746
+  }
+}
+  body(dict) : {'mission_accomplished': {'user_uuid': '7575c349-0522-4592-b4a0-c271bfa1157e', 'mission_id': 'EM137', 'created_at': '2026-09-25T13: 05: 35.147873', 'process_id': 799, 'mission_process_id': 2746
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #373 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162804
+  all headers : {'subscription': 'debug-sub', 'content-length': '687', 'message-id': '8162839,
+  8162804', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345115366'
+}
+  body (json) : {
+  "psychological_assessments": {
+    "pillar_id": "SO",
+    "barriers": [
+      "",
+      ""
+    ],
+    "suppillar": null,
+    "assessment_timestamp": "2026-09-25T14:05:15.194498",
+    "answer_tasklog": {
+      "data": {
+        "answers": [
+          {
+            "code": "8c9f963b89a74ec89e4b7a554b6419b1",
+            "data": [
+              {
+                "data": "pre-intender, motivational"
+              }
+            ],
+            "questionData": null,
+            "value": "5612dc33-3494-46c7-84a1-4971bf44053c"
+          },
+          {
+            "code": "60c01a6f476c4fbe98367ef083242e41",
+            "data": [
+              {
+                "data": "automatic_motivation"
+              }
+            ],
+            "questionData": null,
+            "value": [
+              "79c74833-3211-4f49-81fe-e3b49b6cecc1"
+            ]
+          }
+        ]
+      },
+      "draft": false,
+      "eventEndDate": "2026-10-02T13:44:18.866+0000",
+      "eventStartDate": "2026-09-25T13:44:18.866+0000",
+      "id": 1883,
+      "logDate": "2026-09-25T17:05:14.707+0300"
+    }
+  }
+}
+  body(dict) : {'psychological_assessments': {'pillar_id': 'SO', 'barriers': ['', ''
+    ], 'suppillar': None, 'assessment_timestamp': '2026-09-25T14: 05: 15.194498', 'answer_tasklog': {'data': {'answers': [
+          {'code': '8c9f963b89a74ec89e4b7a554b6419b1', 'data': [
+              {'data': 'pre-intender, motivational'
+              }
+            ], 'questionData': None, 'value': '5612dc33-3494-46c7-84a1-4971bf44053c'
+          },
+          {'code': '60c01a6f476c4fbe98367ef083242e41', 'data': [
+              {'data': 'automatic_motivation'
+              }
+            ], 'questionData': None, 'value': ['79c74833-3211-4f49-81fe-e3b49b6cecc1'
+            ]
+          }
+        ]
+      }, 'draft': False, 'eventEndDate': '2026-10-02T13: 44: 18.866+0000', 'eventStartDate': '2026-09-25T13: 44: 18.866+0000', 'id': 1883, 'logDate': '2026-09-25T17: 05: 14.707+0300'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #374 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162806
+  all headers : {'subscription': 'debug-sub', 'content-length': '669', 'message-id': '8162839,
+  8162806', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345127265'
+}
+  body (json) : {
+  "psychological_assessments": {
+    "pillar_id": "AO",
+    "barriers": [
+      "",
+      ""
+    ],
+    "suppillar": null,
+    "assessment_timestamp": "2026-09-25T14:05:27.260800",
+    "answer_tasklog": {
+      "data": {
+        "answers": [
+          {
+            "code": "7db1021b1a304858891a27be280b61d7",
+            "data": [
+              {
+                "data": "intender"
+              }
+            ],
+            "questionData": null,
+            "value": "47404872-964e-4544-8bd0-5daa9e53cc94"
+          },
+          {
+            "code": "2dc48af21b384fc095117d85f3e76ade",
+            "data": [
+              {
+                "data": "automatic_motivation"
+              }
+            ],
+            "questionData": null,
+            "value": [
+              "02edf818-41fb-4fd6-af95-76b2e9010789"
+            ]
+          }
+        ]
+      },
+      "draft": false,
+      "eventEndDate": "2026-10-02T13:44:18.866+0000",
+      "eventStartDate": "2026-09-25T13:44:18.866+0000",
+      "id": 1884,
+      "logDate": "2026-09-25T17:05:26.886+0300"
+    }
+  }
+}
+  body(dict) : {'psychological_assessments': {'pillar_id': 'AO', 'barriers': ['', ''
+    ], 'suppillar': None, 'assessment_timestamp': '2026-09-25T14: 05: 27.260800', 'answer_tasklog': {'data': {'answers': [
+          {'code': '7db1021b1a304858891a27be280b61d7', 'data': [
+              {'data': 'intender'
+              }
+            ], 'questionData': None, 'value': '47404872-964e-4544-8bd0-5daa9e53cc94'
+          },
+          {'code': '2dc48af21b384fc095117d85f3e76ade', 'data': [
+              {'data': 'automatic_motivation'
+              }
+            ], 'questionData': None, 'value': ['02edf818-41fb-4fd6-af95-76b2e9010789'
+            ]
+          }
+        ]
+      }, 'draft': False, 'eventEndDate': '2026-10-02T13: 44: 18.866+0000', 'eventStartDate': '2026-09-25T13: 44: 18.866+0000', 'id': 1884, 'logDate': '2026-09-25T17: 05: 26.886+0300'
+    }
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #375 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162808
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162808', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345151661'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillars": "PO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillars': 'PO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #376 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162810
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162810', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345152134'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillars": "PO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillars': 'PO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #377 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162812
+  all headers : {'subscription': 'debug-sub', 'content-length': '86', 'message-id': '8162839,
+  8162812', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345156042'
+}
+  body (json) : {
+  "new_pillar": {
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "pillars": "PO"
+  }
+}
+  body(dict) : {'new_pillar': {'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'pillars': 'PO'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #378 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162814
+  all headers : {'subscription': 'debug-sub', 'content-length': '186', 'message-id': '8162839,
+  8162814', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345174610'
+}
+  body (json) : {
+  "mission_selected": {
+    "user_uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "mission": "PM178",
+    "created_at": "2026-09-25T14:06:14.607062",
+    "process_id": 930,
+    "mission_process_id": 3208
+  }
+}
+  body(dict) : {'mission_selected': {'user_uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'mission': 'PM178', 'created_at': '2026-09-25T14: 06: 14.607062', 'process_id': 930, 'mission_process_id': 3208
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #379 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162816
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162816', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790345193824'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
+
+[
+  2026-09-28 10: 19: 05
+] --- Message #385 ---
+  destination : int.ibechange.update
+  message-id  : 8162839,
+8162828
+  all headers : {'subscription': 'debug-sub', 'content-length': '655', 'message-id': '8162839,
+  8162828', 'destination': 'int.ibechange.update', 'expires': '0', 'redelivered': 'false', 'priority': '4', 'persistent': 'true', 'timestamp': '1790346412040'
+}
+  body (json) : {
+  "new_user": {
+    "uuid": "95e72b79-958b-45d3-b5af-2d0c7c371864",
+    "username": "george.alecu.81+006@gmail.com",
+    "email": "george.alecu.81+006@gmail.com",
+    "personalId": "test_simavi_6",
+    "language": "es",
+    "enabled": true,
+    "attributes": {
+      "gender": "male",
+      "sex": "male",
+      "userAge": 34,
+      "wearable": "no",
+      "personalWearableDevice": "no",
+      "voiceRecording": "no",
+      "enrolmentDate": "2026-08-01",
+      "recruitmentCenter": "ICO",
+      "education": "other",
+      "digitalLiteracy": 3,
+      "occupation": "employed-part-time",
+      "height": 179,
+      "weight": 80,
+      "level": 0,
+      "wearable_connected": false,
+      "personal_wearable_connected": false,
+      "screeningProgram": "LUNG"
+    },
+    "tenantName": "ibechange"
+  }
+}
+  body(dict) : {'new_user': {'uuid': '95e72b79-958b-45d3-b5af-2d0c7c371864', 'username': 'george.alecu.81+006@gmail.com', 'email': 'george.alecu.81+006@gmail.com', 'personalId': 'test_simavi_6', 'language': 'es', 'enabled': True, 'attributes': {'gender': 'male', 'sex': 'male', 'userAge': 34, 'wearable': 'no', 'personalWearableDevice': 'no', 'voiceRecording': 'no', 'enrolmentDate': '2026-08-01', 'recruitmentCenter': 'ICO', 'education': 'other', 'digitalLiteracy': 3, 'occupation': 'employed-part-time', 'height': 179, 'weight': 80, 'level': 0, 'wearable_connected': False, 'personal_wearable_connected': False, 'screeningProgram': 'LUNG'
+    }, 'tenantName': 'ibechange'
+  }
+}
+--------------------------------------------------
