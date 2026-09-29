@@ -173,11 +173,12 @@ class TestArtemisProducerInit:
 
     def test_init_client_cert_without_ca_cert_raises(self):
         """Test that client_cert without ca_cert raises error."""
-        with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
-            ArtemisProducer(
-                client_cert="/path/to/client.crt",
-                client_key="/path/to/client.key",
-            )
+        with patch.dict("os.environ", {}, clear=True):
+            with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
+                ArtemisProducer(
+                    client_cert="/path/to/client.crt",
+                    client_key="/path/to/client.key",
+                )
 
 
 class TestArtemisProducerConnection:
@@ -185,13 +186,17 @@ class TestArtemisProducerConnection:
 
     def test_connect_success(self, mock_artemis_connection, mock_stomp_connection_class):
         """Test successful connection to Artemis."""
+        # Setup transport mock
+        mock_transport = MagicMock()
+        mock_artemis_connection.transport = mock_transport
         mock_artemis_connection.is_connected = MagicMock(return_value=False)
         mock_artemis_connection.connect = MagicMock()
         
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
         
-        producer.connect()
+        with patch.object(producer, "_create_connection", return_value=mock_artemis_connection):
+            producer.connect()
         
         mock_artemis_connection.connect.assert_called_once()
 
@@ -262,6 +267,9 @@ class TestArtemisProducerSend:
 
     def test_send_message_connects_if_not_connected(self, mock_artemis_connection, mock_stomp_connection_class):
         """Test that send_message connects if not already connected."""
+        # Setup transport mock
+        mock_transport = MagicMock()
+        mock_artemis_connection.transport = mock_transport
         mock_artemis_connection.is_connected = MagicMock(return_value=False)
         mock_artemis_connection.connect = MagicMock()
         mock_artemis_connection.send = MagicMock()
@@ -269,7 +277,8 @@ class TestArtemisProducerSend:
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
         
-        producer.send_message("/queue/test", {"test": "message"})
+        with patch.object(producer, "_create_connection", return_value=mock_artemis_connection):
+            producer.send_message("/queue/test", {"test": "message"})
         
         mock_artemis_connection.connect.assert_called_once()
         mock_artemis_connection.send.assert_called_once()
@@ -532,49 +541,51 @@ class TestSSLConfiguration:
 
     def test_create_connection_with_no_ssl(self):
         """Test creating connection without SSL (no certs)."""
-        producer = ArtemisProducer(
-            host="test_host",
-            port=61613,
-            ca_cert=None,
-            client_cert=None,
-            client_key=None,
-        )
-        
-        with patch("stomp.Connection") as mock_conn_class:
-            mock_conn = MagicMock()
-            mock_conn_class.return_value = mock_conn
-            mock_transport = MagicMock()
-            mock_conn.transport = mock_transport
+        with patch.dict("os.environ", {}, clear=True):
+            producer = ArtemisProducer(
+                host="test_host",
+                port=61613,
+                ca_cert=None,
+                client_cert=None,
+                client_key=None,
+            )
             
-            result = producer._create_connection()
-            
-            assert result == mock_conn
-            # set_ssl should not be called when no certs are provided
-            mock_transport.set_ssl.assert_not_called()
+            with patch("stomp.Connection") as mock_conn_class:
+                mock_conn = MagicMock()
+                mock_conn_class.return_value = mock_conn
+                mock_transport = MagicMock()
+                mock_conn.transport = mock_transport
+                
+                result = producer._create_connection()
+                
+                assert result == mock_conn
+                # set_ssl should not be called when no certs are provided
+                mock_transport.set_ssl.assert_not_called()
 
     def test_create_connection_with_client_cert_without_ca_cert_raises(self):
         """Test that client_cert without ca_cert raises ValueError during _create_connection."""
-        # This should pass __init__ validation but fail in _create_connection
-        # because we're not providing ca_cert
-        producer = ArtemisProducer(
-            host="test_host",
-            port=61613,
-            ca_cert=None,
-            client_cert=None,
-            client_key=None,
-        )
-        # Set attributes directly to bypass __init__ validation
-        producer.client_cert = "/path/to/client.crt"
-        producer.client_key = "/path/to/client.key"
-        
-        with patch("stomp.Connection") as mock_conn_class:
-            mock_conn = MagicMock()
-            mock_conn_class.return_value = mock_conn
-            mock_transport = MagicMock()
-            mock_conn.transport = mock_transport
+        with patch.dict("os.environ", {}, clear=True):
+            # This should pass __init__ validation but fail in _create_connection
+            # because we're not providing ca_cert
+            producer = ArtemisProducer(
+                host="test_host",
+                port=61613,
+                ca_cert=None,
+                client_cert=None,
+                client_key=None,
+            )
+            # Set attributes directly to bypass __init__ validation
+            producer.client_cert = "/path/to/client.crt"
+            producer.client_key = "/path/to/client.key"
             
-            with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
-                producer._create_connection()
+            with patch("stomp.Connection") as mock_conn_class:
+                mock_conn = MagicMock()
+                mock_conn_class.return_value = mock_conn
+                mock_transport = MagicMock()
+                mock_conn.transport = mock_transport
+                
+                with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
+                    producer._create_connection()
 
     def test_create_connection_with_client_cert_without_client_key_raises(self):
         """Test that client_cert without client_key raises ValueError during _create_connection.
@@ -603,25 +614,26 @@ class TestSSLConfiguration:
 
     def test_create_connection_without_ssl(self):
         """Test creating connection without SSL (no certs)."""
-        producer = ArtemisProducer(
-            host="test_host",
-            port=61613,
-            ca_cert=None,
-            client_cert=None,
-            client_key=None,
-        )
-        
-        with patch("stomp.Connection") as mock_conn_class:
-            mock_conn = MagicMock()
-            mock_conn_class.return_value = mock_conn
-            mock_transport = MagicMock()
-            mock_conn.transport = mock_transport
+        with patch.dict("os.environ", {}, clear=True):
+            producer = ArtemisProducer(
+                host="test_host",
+                port=61613,
+                ca_cert=None,
+                client_cert=None,
+                client_key=None,
+            )
             
-            result = producer._create_connection()
-            
-            assert result == mock_conn
-            # set_ssl should not be called when no certs are provided
-            mock_transport.set_ssl.assert_not_called()
+            with patch("stomp.Connection") as mock_conn_class:
+                mock_conn = MagicMock()
+                mock_conn_class.return_value = mock_conn
+                mock_transport = MagicMock()
+                mock_conn.transport = mock_transport
+                
+                result = producer._create_connection()
+                
+                assert result == mock_conn
+                # set_ssl should not be called when no certs are provided
+                mock_transport.set_ssl.assert_not_called()
 
 
 # =============================================================================

@@ -3,7 +3,7 @@
 
 # ibechange-omi-fastapi
 
-[![License: CC-BY-4.0-International](https://img.shields.io/badge/License-CC%20BY%204.0-blue.svg)](LICENSE)
+[![License: CC-BY-4.0-International](<https://img.shields.io/badge/License-CC%20BY%204.0-blue.svg>)](LICENSE)
 [![coverage report](docs/coverage.svg)](.logs/coverage.txt)
 
 # Data model
@@ -58,13 +58,11 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
     "plan_id": "3b8a9f54-701a-1ab0-afe0-05f100441796"
   }
 }'
-
 ```
 
 ```bash
 curl "http://localhost:3200/selected_contents/"
 ```
-
 
 ### Recommendation Plan
 
