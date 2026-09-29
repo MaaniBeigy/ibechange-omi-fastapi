@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from app.schemas.artemis_producer import ArtemisNotificationPlan
+
 
 class ArtemisPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -161,6 +163,7 @@ ARTEMIS_MESSAGES = {
     "mission_accomplished": ArtemisMissionAccomplished,
     "notification_sent": ArtemisNotification,
     "notification_opened": ArtemisNotification,
+    "notification_plan": ArtemisNotificationPlan,
 }
 
 

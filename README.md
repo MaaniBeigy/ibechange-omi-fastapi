@@ -16,8 +16,7 @@ Opportune Moment Identification (OMI) of Behavior Change Recommendations (iBeCha
 ```bash
 docker volume create metabase_data
 docker compose up --build -d
-docker compose exec app pytest -v
-docker compose exec app pytest --cov=app --cov-report=html -v
+docker compose exec -e TEST_DATABASE_URL=postgresql://omi_user:omi_password@db:5432/omi_db app pytest --cov=app --cov-report=term-missing --cov-report=html tests/
 docker compose exec app pytest --cov-report term --cov app tests/ > .logs/coverage.txt
 docker compose logs app
 docker compose down

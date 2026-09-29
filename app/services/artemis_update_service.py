@@ -151,6 +151,12 @@ def _record_event(
 
 def _apply(db: Session, event_name: str, payload, message_id: str, raw: dict) -> None:
     """Apply one validated Artemis event to the current transaction."""
+    
+    if event_name == "notification_plan":
+        # Handle incoming notification plans from Artemis
+        _handle_notification_plan(db, payload, message_id)
+        return
+
     if event_name == "new_user":
         user = _user(db, payload.uuid)
         user.characteristics = payload.model_dump(mode="json", exclude={"uuid"})
@@ -441,3 +447,28 @@ def record_invalid_message(
     except Exception:
         db.rollback()
         raise
+
+
+
+def _handle_notification_plan(db: Session, payload, message_id: str) -> None:
+    """Handle incoming notification plan message from Artemis."""
+    from app.models.event import Event
+    from app.utils.helpers import _aware_utc, _to_naive_utc
+    
+    user = _user(db, payload.user_id)
+    
+    for notification in payload.notifications:
+        event = Event(
+            user_id=user.id,
+            event_name="notification_sent",
+            event_start_time=_to_naive_utc(payload.start_time),
+            process_id=0,
+            characteristics={
+                "content_id": notification.get("id", ""),
+                "mission_id": notification.get("mission", ""),
+                "content_type": notification.get("type", ""),
+                "mission_process_id": notification.get("mission_process_id"),
+                "source_message_id": message_id,
+            },
+        )
+        db.add(event)
