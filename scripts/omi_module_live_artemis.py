@@ -401,13 +401,13 @@ if __name__ == "__main__":
             BACKFILL_START = NOW - timedelta(days=CATCH_UP_INTERVENTION_DAYS)
             BACKFILL_END = NOW - timedelta(hours=1)
 
-            hourly_update()
+            # hourly_update()
             post_selected_contents()
             fetch_recommendation_plans()  # INTERNAL
             set_notification_plans_artemis()  # BROADCAST to Artemis
 
         elif args.dag_id == 3:
-            hourly_update()
+            # hourly_update()
             post_selected_contents()
             fetch_recommendation_plans()  # INTERNAL
             set_notification_plans_artemis()  # BROADCAST to Artemis
