@@ -22,6 +22,7 @@ from app.models.recommendation_plan import RecommendationPlan
 from app.models.user import HealthHabitAssessment, MissionContent, User
 from app.schemas.update import parse_artemis_message
 from app.services.mission_schedule_service import record_scheduled_snapshot
+from app.services.policy_learning_service import lock_user
 from app.utils.helpers import _aware_utc, _to_naive_utc
 
 
@@ -71,6 +72,10 @@ def _content(
 
 def _link_sent_decision(db: Session, event: Event) -> None:
     """Attach a delivery confirmation to its recorded send decision."""
+    if db.exec(
+        select(PolicyDecision).where(PolicyDecision.outcome_event_id == event.id)
+    ).first():
+        return
     properties = event.characteristics or {}
     plans = db.exec(
         select(RecommendationPlan, Recommendation)
@@ -151,7 +156,7 @@ def _record_event(
 
 def _apply(db: Session, event_name: str, payload, message_id: str, raw: dict) -> None:
     """Apply one validated Artemis event to the current transaction."""
-    
+
     if event_name == "notification_plan":
         # Handle incoming notification plans from Artemis
         _handle_notification_plan(db, payload, message_id)
@@ -401,6 +406,13 @@ def process_artemis_message(
             raise ValueError("Artemis message ID was reused with a different body")
         return False
     try:
+        user_id = (
+            getattr(payload, "user_uuid", None)
+            or getattr(payload, "uuid", None)
+            or getattr(payload, "user_id", None)
+        )
+        if user_id is not None:
+            lock_user(db, user_id)
         db.add(
             ArtemisInbox(
                 message_id=message_id, body_sha256=digest, event_name=event_name
@@ -449,18 +461,14 @@ def record_invalid_message(
         raise
 
 
-
 def _handle_notification_plan(db: Session, payload, message_id: str) -> None:
-    """Handle incoming notification plan message from Artemis."""
-    from app.models.event import Event
-    from app.utils.helpers import _aware_utc, _to_naive_utc
-    
+    """Retain the proposal without treating it as delivery confirmation."""
     user = _user(db, payload.user_id)
-    
+
     for notification in payload.notifications:
         event = Event(
             user_id=user.id,
-            event_name="notification_sent",
+            event_name="notification_plan",
             event_start_time=_to_naive_utc(payload.start_time),
             process_id=0,
             characteristics={

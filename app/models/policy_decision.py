@@ -11,6 +11,7 @@ class PolicyDecision(SQLModel, table=True):
     __tablename__ = "PolicyDecision"
     __table_args__ = (
         UniqueConstraint("user_id", "plan_id", "decided_at", name="uq_policy_epoch"),
+        UniqueConstraint("user_id", "decided_at", name="uq_policy_user_epoch"),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

@@ -5,9 +5,42 @@ import csv
 import gzip
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
+
+from app.rl.learner import ConstrainedConservativeDoubleDQN, TrainingConfig
+from app.rl.network import Network
+from app.rl.replay import write_replay
+from app.services.rl_policy import PolicyArtifact, state_fields
+
+
+def training_values(overrides: dict) -> dict:
+    """Resolve the inspected source registry's runtime subset without notifsim."""
+    values = {f"agent.{key}": value for key, value in asdict(TrainingConfig()).items()}
+    values.update(
+        {
+            "agent.grid_min": 15,
+            "agent.blackout_min": 60.0,
+            "agent.hidden_units": 32,
+            "agent.hidden_layers": 1,
+            "agent.history_window": 20,
+            "agent.skip_prior": 0.0,
+            "agent.con_cddqn_send_q_margin": 0.0,
+            "policy.quiet_hour_start": 22,
+            "policy.quiet_hour_end": 7,
+            "policy.floor_per_day": 2,
+            "policy.floor_per_week": 14,
+            "policy.cap_per_day": 4,
+            "policy.cap_per_week": 28,
+            "engagement.window_min": 60.0,
+            "engagement.delay_decay": 0.15,
+            "engagement.rating_weight": 0.1,
+        }
+    )
+    values.update(overrides)
+    return values
 
 
 def _training_row(
@@ -20,7 +53,11 @@ def _training_row(
     opened = bool(int(row["opened"]))
     reward = float(row["reward"])
     objectives = {
-        "engagement": reward / weight_engagement if action and opened else 0.0,
+        "engagement": (
+            reward / weight_engagement
+            if action and opened and weight_engagement
+            else 0.0
+        ),
         "volume": 0.0,
         "pace": 0.0,
         "miss": -1.0 if action and not opened else 0.0,
@@ -30,9 +67,12 @@ def _training_row(
     )
     if not np.isclose(reward, reconstructed):
         raise ValueError("Decision reward does not match engagement and miss")
-    elapsed = (state["day_remaining"] - next_state["day_remaining"]) * 1440.0
+    elapsed = float(
+        row.get("elapsed_min")
+        or (state["week_remaining"] - next_state["week_remaining"]) * 10080.0
+    )
     if elapsed <= 0:
-        elapsed += 1440.0
+        elapsed += 10080.0
     return {
         "state": np.asarray([state[field] for field in fields], dtype=float),
         "next_state": np.asarray([next_state[field] for field in fields], dtype=float),
@@ -40,7 +80,9 @@ def _training_row(
         "reward": reward,
         "objectives": objectives,
         "elapsed_min": elapsed,
-        "bootstrap": 1.0,
+        "bootstrap": float(
+            1.0 if row.get("bootstrap") in (None, "") else row["bootstrap"]
+        ),
         "safe_mask": np.asarray(json.loads(row["safe_mask"]), dtype=bool),
         "next_safe_mask": np.asarray(json.loads(row["next_safe_mask"]), dtype=bool),
     }
@@ -95,17 +137,15 @@ def export(
     seed: int,
 ) -> None:
     """Fit the source agent and write versioned NumPy weight files."""
-    from notifsim import registry
-    from notifsim.agents.constrained import ConstrainedConservativeDoubleDQN
-    from notifsim.env.state import visible_fields
-
+    if min(limit, scan_limit, steps) < 1:
+        raise ValueError("Training limits and steps must be positive")
     run = json.loads(run_path.read_text(encoding="utf-8"))
     if run["arms"] != ["A"] or run["scales"] != ["fielded"]:
         raise ValueError("Training log must use the engagement-plus-miss arm A")
-    values = registry.resolve(run["overrides"])
+    values = training_values(run["overrides"])
     fields_by_device = {
-        "nonwearer": visible_fields(False),
-        "wearer": visible_fields(True),
+        "nonwearer": state_fields(False),
+        "wearer": state_fields(True),
     }
     rows_by_device, digest = collect_rows(
         log_path, fields_by_device, values, limit, scan_limit
@@ -113,18 +153,6 @@ def export(
     output.mkdir(parents=True, exist_ok=True)
     for device, rows in rows_by_device.items():
         fields = fields_by_device[device]
-        agent = ConstrainedConservativeDoubleDQN(
-            values, len(fields), seed=seed, offline=rows
-        )
-        agent.pretrain(steps, np.random.default_rng(seed))
-        weights = {
-            f"weight_{index}": weight
-            for index, weight in enumerate(agent.online.weights)
-        }
-        weights.update(
-            {f"bias_{index}": bias for index, bias in enumerate(agent.online.biases)}
-        )
-        np.savez_compressed(output / f"con_cddqn_{device}.npz", **weights)
         metadata = {
             "format_version": 1,
             "policy": "con_cddqn",
@@ -143,7 +171,7 @@ def export(
             "hidden_layers": values["agent.hidden_layers"],
             "hidden_units": values["agent.hidden_units"],
             "batch_size": values["agent.batch_size"],
-            "send_q_margin": agent.send_q_margin,
+            "send_q_margin": values["agent.con_cddqn_send_q_margin"],
             "grid_min": values["agent.grid_min"],
             "blackout_min": values["agent.blackout_min"],
             "quiet_hour_start": values["policy.quiet_hour_start"],
@@ -157,6 +185,39 @@ def export(
             "delay_decay": values["engagement.delay_decay"],
             "rating_weight": values["engagement.rating_weight"],
         }
+        metadata.update(
+            {key: values[f"agent.{key}"] for key in TrainingConfig.__dataclass_fields__}
+        )
+        metadata["send_q_margin"] = values["agent.con_cddqn_send_q_margin"]
+        network = Network(
+            len(fields),
+            int(values["agent.hidden_units"]),
+            np.random.default_rng(seed),
+            int(values["agent.hidden_layers"]),
+        )
+        network.bias_out[0] += values["agent.skip_prior"]
+        initial = PolicyArtifact(metadata, network.weights, network.biases)
+        agent = ConstrainedConservativeDoubleDQN(initial, seed=seed, offline=rows)
+        agent.rng = np.random.default_rng(seed)
+        agent.pretrain(steps)
+        # The source calls prefer_skip again after its offline phase.
+        agent.online.bias_out[0] += values["agent.skip_prior"]
+        weights = {
+            f"weight_{index}": weight
+            for index, weight in enumerate(agent.online.weights)
+        }
+        weights.update(
+            {f"bias_{index}": bias for index, bias in enumerate(agent.online.biases)}
+        )
+        stem = output / f"con_cddqn_{device}"
+        np.savez_compressed(stem.with_suffix(".npz"), **weights)
+        metadata["model_sha256"] = hashlib.sha256(
+            stem.with_suffix(".npz").read_bytes()
+        ).hexdigest()
+        write_replay(stem.with_suffix(".replay.npz"), rows, len(fields))
+        metadata["offline_replay_sha256"] = hashlib.sha256(
+            stem.with_suffix(".replay.npz").read_bytes()
+        ).hexdigest()
         (output / f"con_cddqn_{device}.json").write_text(
             json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
         )
@@ -178,5 +239,5 @@ def main() -> None:
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

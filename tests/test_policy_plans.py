@@ -1112,6 +1112,7 @@ def _sent_event(user_id, content_id, when):
         event_name="notification_sent",
         event_start_time=when.replace(tzinfo=None),
         process_id=15,
+        created_at=when,
         characteristics={
             "content_id": content_id,
             "content_type": "recommendation",

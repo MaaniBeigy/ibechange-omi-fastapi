@@ -4,7 +4,7 @@
 # ibechange-omi-fastapi
 
 [![License: CC-BY-4.0-International](<https://img.shields.io/badge/License-CC%20BY%204.0-blue.svg>)](LICENSE)
-[![coverage report](docs/coverage.svg)](.logs/coverage.txt)
+[![coverage report](docs/coverage.svg)](docs/review-verification.md#validation)
 
 # Data model
 
@@ -13,14 +13,41 @@ Opportune Moment Identification (OMI) of Behavior Change Recommendations (iBeCha
 
 ## Deploy
 
+Copy `.env.example` to `.env`, set the database credentials and the Artemis
+host, credentials and assigned queue, and choose `POLICY_LEARNING_MODE=online`
+for per-user fitting or `frozen` for a fixed trial policy.
+
 ```bash
 docker volume create metabase_data
 docker compose up --build -d
-docker compose exec -e TEST_DATABASE_URL=postgresql://omi_user:omi_password@db:5432/omi_db app pytest --cov=app --cov-report=term-missing --cov-report=html tests/
-docker compose exec app pytest --cov-report term --cov app tests/ > .logs/coverage.txt
 docker compose logs app
 docker compose down
 ```
+
+Compose runs bootstrap/migrations before the API, Artemis consumer and policy
+worker. Code and artifacts are baked into the image; rebuild it after changes.
+PostgreSQL persists plans, replay and per-user optimizer checkpoints across
+container restarts. The external `metabase_data` volume remains required by the
+existing analytics services.
+
+Run checks against the dedicated disposable test database, separated from the
+application database:
+
+```bash
+docker compose --profile checks run --build --rm tests
+```
+
+For local development, install `requirements-dev.txt`, point `POSTGRES_*` and
+`TEST_DATABASE_URL` at a test PostgreSQL instance, and run:
+
+```bash
+black --check app scripts tests migrations
+isort --check-only app scripts tests migrations
+pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=99 tests/
+```
+
+The [review verification](docs/review-verification.md) evaluates every RL review
+finding. [RL persistence](docs/rl-data-model.md) supplements the earlier diagram.
 
 ### Selected Content
 
@@ -81,10 +108,10 @@ curl "http://localhost:3200/notification_plans/?start_time=2025-12-03T17:00:00&e
 The `/updates` HTTP endpoint has been replaced by a STOMP consumer. Set the
 `ARTEMIS_*` variables in `.env`, including the queue assigned to this service,
 then apply the database migration and start the consumer as a separate process.
-The existing database must already contain the `User` and `Mission` tables.
+Compose initializes fresh databases and migrates existing installations.
 
 ```bash
-alembic upgrade head
+python -m app.bootstrap
 python -m app.artemis_consumer --queue int.ibechange.update::tue-updates-int
 ```
 
@@ -94,8 +121,10 @@ Each message has one top-level event key. For example:
 {"new_pillar": {"user_uuid": "3a6f5cbc-3e91-4a7a-8b41-7ce6bbd3372f", "pillars": "NO"}}
 ```
 
-The consumer accepts the twelve event types in `app/schemas/update.py`, including
-`task_step_scheduled`, `task_step_done`, and `mission_accomplished`. A scheduled
+The consumer accepts the twelve captured event types in `app/schemas/update.py`, including
+`task_step_scheduled`, `task_step_done`, and `mission_accomplished`, plus
+`notification_plan` proposals. Proposals are retained without counting them as
+confirmed deliveries. A scheduled
 task message gives one `scheduled_for` interval per reported step. OMI records
 the original `startDate` and `endDate` strings and updates the active intervals
 for that mission process when Artemis sends a later schedule. Completion events
@@ -114,21 +143,41 @@ Invalid messages are recorded in `ArtemisFailure` before acknowledgement.
 ### Policy artifacts
 
 The `app/policy_artifacts` directory contains exported `con_cddqn` weights for
-participants with and without wearable inputs. They were fitted on 20,000
+participants with and without wearable inputs. Their bundled metadata records fitting on 20,000
 simulated behavior decisions per state width from the RL project's
 `data/learn/wearable_940/decisions.csv.gz`, using 2,000 offline updates and seed
 `20260928`. The JSON files record state fields, source paths, configuration,
 and a hash of the training sample. The application needs only NumPy to load the
 weights. Both artifacts are checked when the API starts, and startup fails if
 either file is missing or has an incompatible state layout. Recreating them
-requires the `notifsim` package from the separate RL project:
+uses the local runtime and a behavior log with reward arm **A** (engagement plus
+unopened-send cost). The current reference run at the historical path may use
+arm F; it cannot reconstruct the original sample from that run. Use an explicit
+arm-A log and its matching run metadata:
 
 ```bash
-python scripts/train_policy_artifacts.py \
-  --log /home/mbeigi/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz \
-  --run /home/mbeigi/notification-reward-engineering/data/learn/wearable_940/run.json \
+python -m scripts.train_policy_artifacts \
+  --log /path/to/arm-a/decisions.csv.gz \
+  --run /path/to/arm-a/run.json \
   --out app/policy_artifacts --limit 20000 --steps 2000 --seed 20260928
 ```
+
+`POLICY_LEARNING_MODE=online` starts a separate learner for each user and device
+from these weights. Its replay, target network, Adam state, refit cadence and
+random-generator state persist in PostgreSQL. Confirmed `notification_sent`
+events provide delivery evidence, and matched opens provide engagement after
+the response window closes. The reward combines engagement and unopened-send
+cost, with elapsed-time discounting and CQL over feasible actions. Every decision
+records its exact model/configuration revision. `frozen` records outcomes while
+keeping serving weights fixed. The local runtime's source license and hashes are
+in [app/rl/NOTICE.md](app/rl/NOTICE.md).
+
+New exports include complete training settings and optional offline replay.
+The bundled artifacts have no replay archive, so live fitting initially samples
+only each user's own released transitions. Their previously missing settings
+are identified by `runtime_training_defaults` in the metadata. Raw Oura readings
+need a calibrated mapping to the model's standardized channels; until one is
+provided, wearers use the model's missing-reading block.
 
 These weights use the research simulator's two item classes. The application
 maps resources to its recommendation class and keeps reminders in the deadline
@@ -142,10 +191,13 @@ policy; the old `MIN_NOTIFICATIONS_*` and `MAX_NOTIFICATIONS_*` environment
 settings are unused. The model artifact supplies the total weekly cap. Serving
 does not impose a weekly minimum because the supplied queue may have fewer
 items. `POLICY_TIMEZONE` sets the local day, with `Europe/Berlin` as the default.
-The plan endpoints decide one current epoch per request. Their constraint mask
-checks that the selected daily queue can still finish, but actual delivery of
-the daily minimum depends on running later decision epochs. An automatic epoch
-scheduler is still pending.
+The `policy-worker` runs every real decision grid epoch. The plan endpoints can
+also commit their next grid epoch, at most one grid interval ahead, using only
+information already observed when the request arrives. Concurrent worker/API
+calls keep one action per user and epoch. Downtime is not filled with simulated
+historical decisions. The delivery integration must retrieve and deliver the
+committed plans; the mask guarantees feasible planning while actual delivery
+requires that integration and later broker confirmations.
 An unresolved reminder has no safe send action. The plan endpoint reports that
 queue as infeasible. For each reminder, OMI matches active Artemis
 `task_step_scheduled` intervals by user UUID and mission ID. It uses the latest

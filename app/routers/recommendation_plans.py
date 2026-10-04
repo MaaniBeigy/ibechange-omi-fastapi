@@ -5,7 +5,7 @@ from typing import Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
@@ -21,6 +21,7 @@ from app.schemas.recommendation_plan import (
     RecommendationPlanList,
     RecommendationPlanResponse,
 )
+from app.services.policy_learning_service import close_episode
 from app.services.recommendation_plan_service import generate_recommendation_plan
 from app.services.rl_policy import InfeasibleQueueError, load_policy_artifacts
 from app.utils.helpers import _aware_utc, _iso_to_utc_aware
@@ -50,10 +51,10 @@ def _window(start_time: str, end_time: str) -> tuple[datetime, datetime]:
 def _next_epoch(now: datetime) -> datetime:
     """Return the first decision grid instant that has not passed."""
     grid_min = int(load_policy_artifacts()["nonwearer"].metadata["grid_min"])
-    if now.minute % grid_min == 0 and now.second == 0 and now.microsecond == 0:
-        return now
-    minute = (now.minute // grid_min + 1) * grid_min
-    return now.replace(minute=0, second=0, microsecond=0) + timedelta(minutes=minute)
+    grid_seconds = grid_min * 60
+    stamp = now.timestamp()
+    remainder = stamp % grid_seconds
+    return now if remainder == 0 else now + timedelta(seconds=grid_seconds - remainder)
 
 
 def _latest_selections(db: Session) -> list[SelectedContent]:
@@ -83,10 +84,22 @@ def _decide_current_epoch(db: Session, epoch: datetime) -> None:
             )
             current = db.exec(
                 select(SelectedContent)
-                .where(SelectedContent.id == selected.id)
+                .where(
+                    SelectedContent.user_id == selected.user_id,
+                    SelectedContent.is_deleted == False,
+                )
+                .order_by(
+                    func.coalesce(
+                        SelectedContent.modified_at, SelectedContent.created_at
+                    ).desc(),
+                    SelectedContent.id.desc(),
+                )
+                .limit(1)
+                .execution_options(populate_existing=True)
                 .with_for_update()
             ).one()
             generate_recommendation_plan(current, epoch, db)
+            close_episode(db, selected.user_id, epoch)
             db.commit()
         except InfeasibleQueueError as error:
             db.rollback()

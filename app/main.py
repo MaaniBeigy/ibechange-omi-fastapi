@@ -13,6 +13,7 @@ from app.routers import (
     recommendations,
     selected_contents,
 )
+from app.services.policy_learning_service import learning_mode
 from app.services.rl_policy import load_policy_artifacts
 
 load_dotenv()
@@ -37,6 +38,7 @@ def create_db_and_tables():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    learning_mode()
     load_policy_artifacts()
     create_db_and_tables()
     yield

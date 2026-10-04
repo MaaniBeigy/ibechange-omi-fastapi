@@ -18,6 +18,7 @@ from app.models.recommendation import Recommendation
 from app.models.recommendation_plan import RecommendationPlan
 from app.models.selected_content import SelectedContent
 from app.models.user import User
+from app.services.policy_learning_service import prepare_policy, record_next_state
 from app.services.rl_observations import observed_history
 from app.services.rl_policy import (
     MAX_RECOMMENDATION_CLASS_PER_DAY,
@@ -133,6 +134,7 @@ def _delivery_counts(
     week_begin: datetime,
     day_end: datetime,
     zone: ZoneInfo,
+    epoch: datetime,
 ) -> tuple[Counter, Counter]:
     """Match planned sends to broker confirmations and count unmatched sends."""
     planned: Counter[tuple] = Counter()
@@ -153,6 +155,8 @@ def _delivery_counts(
             Event.event_name == "notification_sent",
             Event.event_start_time >= _to_naive_utc(week_begin),
             Event.event_start_time < _to_naive_utc(day_end),
+            Event.event_start_time <= _to_naive_utc(epoch),
+            Event.created_at <= epoch,
             Event.is_deleted == False,
             Event.is_virtual == False,
         )
@@ -186,10 +190,10 @@ def generate_recommendation_plan(
     if user is None or user.is_deleted:
         return None
     epoch = _aware_utc(epoch)
+    observed_at = min(epoch, datetime.now(timezone.utc))
     if db.exec(
         select(PolicyDecision).where(
             PolicyDecision.user_id == selected.user_id,
-            PolicyDecision.plan_id == selected.id,
             PolicyDecision.decided_at == epoch,
         )
     ).first():
@@ -212,7 +216,7 @@ def generate_recommendation_plan(
         )
     ).all()
     planned_counts, confirmed_counts = _delivery_counts(
-        db, user.id, prior, week_begin, day_end, zone
+        db, user.id, prior, week_begin, day_end, zone, observed_at
     )
     combined_counts = planned_counts | confirmed_counts
     unmatched_confirmed = confirmed_counts - planned_counts
@@ -249,7 +253,8 @@ def generate_recommendation_plan(
     attributes = (user.characteristics or {}).get("attributes", {})
     wearer = attributes.get("wearable") == "yes"
     policy = load_policy_artifacts()["wearer" if wearer else "nonwearer"]
-    history = observed_history(db, user.id, epoch, policy.metadata, zone)
+    policy = prepare_policy(db, user.id, policy, observed_at)
+    history = observed_history(db, user.id, observed_at, policy.metadata, zone)
     sent_recommendation_class = sum(
         count
         for identity, count in combined_counts.items()
@@ -367,19 +372,20 @@ def generate_recommendation_plan(
     )
     index, key, content = occurrences[0]
     policy_version = f"{decision.policy_version}-omi2x2-v1"
-    db.add(
-        PolicyDecision(
-            user_id=user.id,
-            plan_id=selected.id,
-            occurrence_index=index,
-            decided_at=epoch,
-            action=decision.action,
-            propensity=1.0,
-            state=decision.state.tolist(),
-            safe_mask=list(decision.safe_mask),
-            policy_version=policy_version,
-        )
+    recorded = PolicyDecision(
+        user_id=user.id,
+        plan_id=selected.id,
+        occurrence_index=index,
+        decided_at=epoch,
+        action=decision.action,
+        propensity=1.0,
+        state=decision.state.tolist(),
+        safe_mask=list(decision.safe_mask),
+        policy_version=policy_version,
     )
+    db.add(recorded)
+    db.flush()
+    record_next_state(db, recorded)
     if decision.action == 0:
         db.flush()
         return None

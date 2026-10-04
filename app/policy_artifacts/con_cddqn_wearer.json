@@ -65,5 +65,24 @@
   "history_window": 320,
   "response_window_min": 60.0,
   "delay_decay": 0.15,
-  "rating_weight": 0.1
+  "rating_weight": 0.1,
+  "target_copy_interval": 100,
+  "replay_capacity": 20000,
+  "retrain_period_days": 1,
+  "updates_per_epoch": 4,
+  "offline_batch_share": 0.5,
+  "discount_half_life_min": 2880.0,
+  "weight_engagement": 1.0,
+  "weight_miss": 0.15,
+  "runtime_training_defaults": [
+    "target_copy_interval",
+    "replay_capacity",
+    "retrain_period_days",
+    "updates_per_epoch",
+    "offline_batch_share",
+    "discount_half_life_min",
+    "weight_engagement",
+    "weight_miss"
+  ],
+  "model_sha256": "cbc7b1f4b8170f50b7b3f7817552792efbbb709e13bb85bf834ac1207b7d5cd5"
 }

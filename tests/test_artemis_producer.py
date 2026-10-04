@@ -20,10 +20,10 @@ from app.services.artemis_producer_service import (
     send_notification_plan_to_artemis,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_artemis_connection():
@@ -58,6 +58,7 @@ def sample_notification_plan():
 # =============================================================================
 # Schema Tests
 # =============================================================================
+
 
 class TestArtemisNotificationPlan:
     """Tests for ArtemisNotificationPlan schema."""
@@ -103,11 +104,11 @@ class TestMessageCreators:
         notifications = sample_notification_plan.notifications
         start_time = sample_notification_plan.start_time
         end_time = sample_notification_plan.end_time
-        
+
         message = create_notification_plan_message(
             user_id, notifications, start_time, end_time
         )
-        
+
         assert "notification_plan" in message
         assert message["notification_plan"]["user_id"] == str(user_id)
         assert len(message["notification_plan"]["notifications"]) == 2
@@ -119,17 +120,22 @@ class TestMessageCreators:
 # ArtemisProducer Tests
 # =============================================================================
 
+
 class TestArtemisProducerInit:
     """Tests for ArtemisProducer initialization."""
 
     def test_init_with_defaults(self, mock_stomp_connection_class):
         """Test producer initialization with default values."""
-        with patch.dict("os.environ", {
-            "ARTEMIS_HOST": "localhost",
-            "ARTEMIS_PORT": "61613",
-            "ARTEMIS_USER": "admin",
-            "ARTEMIS_PASSWORD": "password",
-        }, clear=True):
+        with patch.dict(
+            "os.environ",
+            {
+                "ARTEMIS_HOST": "localhost",
+                "ARTEMIS_PORT": "61613",
+                "ARTEMIS_USER": "admin",
+                "ARTEMIS_PASSWORD": "password",
+            },
+            clear=True,
+        ):
             producer = ArtemisProducer()
             assert producer.host == "localhost"
             assert producer.port == 61613
@@ -164,7 +170,10 @@ class TestArtemisProducerInit:
         """Test that missing client_key with client_cert raises error."""
         # The producer checks: if bool(client_cert) != bool(client_key)
         # So if client_cert is set but client_key is not, it should raise
-        with pytest.raises(ValueError, match="Both ARTEMIS_CLIENT_CERT and ARTEMIS_CLIENT_KEY are required"):
+        with pytest.raises(
+            ValueError,
+            match="Both ARTEMIS_CLIENT_CERT and ARTEMIS_CLIENT_KEY are required",
+        ):
             ArtemisProducer(
                 ca_cert="/path/to/ca.crt",
                 client_cert="/path/to/client.crt",
@@ -174,7 +183,9 @@ class TestArtemisProducerInit:
     def test_init_client_cert_without_ca_cert_raises(self):
         """Test that client_cert without ca_cert raises error."""
         with patch.dict("os.environ", {}, clear=True):
-            with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
+            with pytest.raises(
+                ValueError, match="ARTEMIS_CA_CERT is required for client certificates"
+            ):
                 ArtemisProducer(
                     client_cert="/path/to/client.crt",
                     client_key="/path/to/client.key",
@@ -184,56 +195,60 @@ class TestArtemisProducerInit:
 class TestArtemisProducerConnection:
     """Tests for ArtemisProducer connection management."""
 
-    def test_connect_success(self, mock_artemis_connection, mock_stomp_connection_class):
+    def test_connect_success(
+        self, mock_artemis_connection, mock_stomp_connection_class
+    ):
         """Test successful connection to Artemis."""
         # Setup transport mock
         mock_transport = MagicMock()
         mock_artemis_connection.transport = mock_transport
         mock_artemis_connection.is_connected = MagicMock(return_value=False)
         mock_artemis_connection.connect = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
-        with patch.object(producer, "_create_connection", return_value=mock_artemis_connection):
+
+        with patch.object(
+            producer, "_create_connection", return_value=mock_artemis_connection
+        ):
             producer.connect()
-        
+
         mock_artemis_connection.connect.assert_called_once()
 
     def test_connect_already_connected(self, mock_artemis_connection):
         """Test that connection is not re-established if already connected."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.connect = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         producer.connect()
-        
+
         mock_artemis_connection.connect.assert_not_called()
 
     def test_disconnect_success(self, mock_artemis_connection):
         """Test successful disconnection from Artemis."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.disconnect = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         producer.disconnect()
-        
+
         mock_artemis_connection.disconnect.assert_called_once()
 
     def test_disconnect_not_connected(self, mock_artemis_connection):
         """Test that disconnect does nothing if not connected."""
         mock_artemis_connection.is_connected = MagicMock(return_value=False)
         mock_artemis_connection.disconnect = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         producer.disconnect()
-        
+
         mock_artemis_connection.disconnect.assert_not_called()
 
     def test_context_manager_methods_exist(self):
@@ -252,20 +267,22 @@ class TestArtemisProducerSend:
         """Test successful message sending."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.send = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         message = {"test": "message"}
         msg_id = producer.send_message("/queue/test", message)
-        
+
         assert msg_id.startswith("omi-")
         mock_artemis_connection.send.assert_called_once()
         call_args = mock_artemis_connection.send.call_args
         assert call_args[1]["destination"] == "/queue/test"
         assert json.loads(call_args[1]["body"]) == message
 
-    def test_send_message_connects_if_not_connected(self, mock_artemis_connection, mock_stomp_connection_class):
+    def test_send_message_connects_if_not_connected(
+        self, mock_artemis_connection, mock_stomp_connection_class
+    ):
         """Test that send_message connects if not already connected."""
         # Setup transport mock
         mock_transport = MagicMock()
@@ -273,13 +290,15 @@ class TestArtemisProducerSend:
         mock_artemis_connection.is_connected = MagicMock(return_value=False)
         mock_artemis_connection.connect = MagicMock()
         mock_artemis_connection.send = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
-        with patch.object(producer, "_create_connection", return_value=mock_artemis_connection):
+
+        with patch.object(
+            producer, "_create_connection", return_value=mock_artemis_connection
+        ):
             producer.send_message("/queue/test", {"test": "message"})
-        
+
         mock_artemis_connection.connect.assert_called_once()
         mock_artemis_connection.send.assert_called_once()
 
@@ -287,12 +306,12 @@ class TestArtemisProducerSend:
         """Test that persistent header is included."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.send = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         producer.send_message("/queue/test", {"test": "message"}, persistent=True)
-        
+
         call_args = mock_artemis_connection.send.call_args
         # The persistent header is set as string "True" (Python bool)
         assert call_args[1]["headers"]["persistent"] == "True"
@@ -301,12 +320,12 @@ class TestArtemisProducerSend:
         """Test that message-id header is included."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.send = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         msg_id = producer.send_message("/queue/test", {"test": "message"})
-        
+
         call_args = mock_artemis_connection.send.call_args
         assert call_args[1]["headers"]["message-id"] == msg_id
 
@@ -314,10 +333,10 @@ class TestArtemisProducerSend:
         """Test sending a notification plan."""
         mock_artemis_connection.is_connected = MagicMock(return_value=True)
         mock_artemis_connection.send = MagicMock()
-        
+
         producer = ArtemisProducer()
         producer._connection = mock_artemis_connection
-        
+
         user_id = uuid4()
         notifications = [
             {"id": "1", "type": "recommendation", "mission": "m1"},
@@ -325,14 +344,14 @@ class TestArtemisProducerSend:
         ]
         start = datetime.now(timezone.utc)
         end = start + timedelta(hours=1)
-        
+
         msg_id = producer.send_notification_plan(
             user_id=user_id,
             notifications=notifications,
             start_time=start,
             end_time=end,
         )
-        
+
         assert msg_id.startswith("omi-")
         mock_artemis_connection.send.assert_called_once()
 
@@ -357,7 +376,7 @@ class TestSendNotificationPlanToArtemis:
         mock_producer.disconnect = MagicMock()
         mock_producer.send_message = MagicMock(return_value="msg-123")
         mock_get_producer.return_value = mock_producer
-        
+
         user_id = uuid4()
         notifications = [
             {
@@ -368,33 +387,37 @@ class TestSendNotificationPlanToArtemis:
         ]
         start = datetime.now(timezone.utc)
         end = start + timedelta(hours=1)
-        
+
         msg_id = send_notification_plan_to_artemis(
             user_id=user_id,
             notifications=notifications,
             start_time=start,
             end_time=end,
         )
-        
+
         assert msg_id == "msg-123"
         mock_producer.connect.assert_called_once()
         mock_producer.send_message.assert_called_once()
         mock_producer.disconnect.assert_called_once()
 
     @patch("app.services.artemis_producer_service.get_artemis_producer")
-    def test_send_plan_handles_exception(self, mock_get_producer, mock_artemis_connection):
+    def test_send_plan_handles_exception(
+        self, mock_get_producer, mock_artemis_connection
+    ):
         """Test that exception is propagated and disconnect is called."""
         mock_producer = MagicMock()
         mock_producer.connect = MagicMock()
         mock_producer.disconnect = MagicMock()
-        mock_producer.send_message = MagicMock(side_effect=Exception("Connection failed"))
+        mock_producer.send_message = MagicMock(
+            side_effect=Exception("Connection failed")
+        )
         mock_get_producer.return_value = mock_producer
-        
+
         user_id = uuid4()
         notifications = []
         start = datetime.now(timezone.utc)
         end = start + timedelta(hours=1)
-        
+
         with pytest.raises(Exception, match="Connection failed"):
             send_notification_plan_to_artemis(
                 user_id=user_id,
@@ -402,13 +425,14 @@ class TestSendNotificationPlanToArtemis:
                 start_time=start,
                 end_time=end,
             )
-        
+
         mock_producer.disconnect.assert_called_once()
 
 
 # =============================================================================
 # Serialization Tests
 # =============================================================================
+
 
 class TestMessageSerialization:
     """Tests for message serialization and deserialization."""
@@ -417,7 +441,7 @@ class TestMessageSerialization:
         """Test that notification plan can be serialized to JSON."""
         json_str = sample_notification_plan.model_dump_json()
         assert isinstance(json_str, str)
-        
+
         # Verify it can be parsed back
         parsed = json.loads(json_str)
         assert parsed["user_id"] == str(sample_notification_plan.user_id)
@@ -431,7 +455,7 @@ class TestMessageSerialization:
             sample_notification_plan.start_time,
             sample_notification_plan.end_time,
         )
-        
+
         assert "notification_plan" in message
         plan = message["notification_plan"]
         assert "user_id" in plan
@@ -443,6 +467,7 @@ class TestMessageSerialization:
 # =============================================================================
 # Edge Case Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
@@ -475,12 +500,12 @@ class TestEdgeCases:
     def test_message_id_uniqueness(self):
         """Test that generated message IDs are unique."""
         producer = ArtemisProducer()
-        
+
         msg_ids = [producer._generate_message_id() for _ in range(100)]
-        
+
         # All IDs should be unique
         assert len(msg_ids) == len(set(msg_ids))
-        
+
         # All should start with "omi-"
         assert all(msg_id.startswith("omi-") for msg_id in msg_ids)
 
@@ -488,6 +513,7 @@ class TestEdgeCases:
 # =============================================================================
 # SSL/TLS Configuration Tests
 # =============================================================================
+
 
 class TestSSLConfiguration:
     """Tests for SSL/TLS configuration in _create_connection."""
@@ -499,15 +525,15 @@ class TestSSLConfiguration:
             port=61613,
             ca_cert="/path/to/ca.crt",
         )
-        
+
         with patch("stomp.Connection") as mock_conn_class:
             mock_conn = MagicMock()
             mock_conn_class.return_value = mock_conn
             mock_transport = MagicMock()
             mock_conn.transport = mock_transport
-            
+
             result = producer._create_connection()
-            
+
             assert result == mock_conn
             mock_transport.set_ssl.assert_called_once()
             call_kwargs = mock_transport.set_ssl.call_args[1]
@@ -523,15 +549,15 @@ class TestSSLConfiguration:
             client_cert="/path/to/client.crt",
             client_key="/path/to/client.key",
         )
-        
+
         with patch("stomp.Connection") as mock_conn_class:
             mock_conn = MagicMock()
             mock_conn_class.return_value = mock_conn
             mock_transport = MagicMock()
             mock_conn.transport = mock_transport
-            
+
             result = producer._create_connection()
-            
+
             assert result == mock_conn
             mock_transport.set_ssl.assert_called_once()
             call_kwargs = mock_transport.set_ssl.call_args[1]
@@ -549,15 +575,15 @@ class TestSSLConfiguration:
                 client_cert=None,
                 client_key=None,
             )
-            
+
             with patch("stomp.Connection") as mock_conn_class:
                 mock_conn = MagicMock()
                 mock_conn_class.return_value = mock_conn
                 mock_transport = MagicMock()
                 mock_conn.transport = mock_transport
-                
+
                 result = producer._create_connection()
-                
+
                 assert result == mock_conn
                 # set_ssl should not be called when no certs are provided
                 mock_transport.set_ssl.assert_not_called()
@@ -577,19 +603,22 @@ class TestSSLConfiguration:
             # Set attributes directly to bypass __init__ validation
             producer.client_cert = "/path/to/client.crt"
             producer.client_key = "/path/to/client.key"
-            
+
             with patch("stomp.Connection") as mock_conn_class:
                 mock_conn = MagicMock()
                 mock_conn_class.return_value = mock_conn
                 mock_transport = MagicMock()
                 mock_conn.transport = mock_transport
-                
-                with pytest.raises(ValueError, match="ARTEMIS_CA_CERT is required for client certificates"):
+
+                with pytest.raises(
+                    ValueError,
+                    match="ARTEMIS_CA_CERT is required for client certificates",
+                ):
                     producer._create_connection()
 
     def test_create_connection_with_client_cert_without_client_key_raises(self):
         """Test that client_cert without client_key raises ValueError during _create_connection.
-        
+
         This tests the edge case where __init__ validation is bypassed.
         """
         producer = ArtemisProducer(
@@ -602,14 +631,17 @@ class TestSSLConfiguration:
         # Set attributes directly to bypass __init__ validation
         producer.client_cert = "/path/to/client.crt"
         producer.client_key = None  # Bypass __init__ check
-        
+
         with patch("stomp.Connection") as mock_conn_class:
             mock_conn = MagicMock()
             mock_conn_class.return_value = mock_conn
             mock_transport = MagicMock()
             mock_conn.transport = mock_transport
-            
-            with pytest.raises(ValueError, match="ARTEMIS_CLIENT_KEY is required when ARTEMIS_CLIENT_CERT is set"):
+
+            with pytest.raises(
+                ValueError,
+                match="ARTEMIS_CLIENT_KEY is required when ARTEMIS_CLIENT_CERT is set",
+            ):
                 producer._create_connection()
 
     def test_create_connection_without_ssl(self):
@@ -622,15 +654,15 @@ class TestSSLConfiguration:
                 client_cert=None,
                 client_key=None,
             )
-            
+
             with patch("stomp.Connection") as mock_conn_class:
                 mock_conn = MagicMock()
                 mock_conn_class.return_value = mock_conn
                 mock_transport = MagicMock()
                 mock_conn.transport = mock_transport
-                
+
                 result = producer._create_connection()
-                
+
                 assert result == mock_conn
                 # set_ssl should not be called when no certs are provided
                 mock_transport.set_ssl.assert_not_called()
@@ -640,6 +672,7 @@ class TestSSLConfiguration:
 # Connection Exception Handling Tests
 # =============================================================================
 
+
 class TestConnectionExceptionHandling:
     """Tests for connection exception handling."""
 
@@ -648,30 +681,37 @@ class TestConnectionExceptionHandling:
         producer = ArtemisProducer()
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.connect = MagicMock(side_effect=Exception("Connection failed"))
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             with caplog.at_level(logging.ERROR):
                 with pytest.raises(Exception, match="Connection failed"):
                     producer.connect()
-            
-            assert any("Failed to connect to Artemis" in record.message for record in caplog.records)
+
+            assert any(
+                "Failed to connect to Artemis" in record.message
+                for record in caplog.records
+            )
 
     def test_connect_logs_success(self, caplog):
         """Test that connect logs success message."""
         producer = ArtemisProducer(host="localhost", port=61613)
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.connect = MagicMock()
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             with caplog.at_level(logging.INFO):
                 producer.connect()
-            
-            assert any("Connected to Artemis broker" in record.message for record in caplog.records)
+
+            assert any(
+                "Connected to Artemis broker" in record.message
+                for record in caplog.records
+            )
 
 
 # =============================================================================
 # Send Message Exception Handling Tests
 # =============================================================================
+
 
 class TestSendMessageExceptionHandling:
     """Tests for send_message exception handling."""
@@ -683,18 +723,22 @@ class TestSendMessageExceptionHandling:
         mock_conn.is_connected = MagicMock(return_value=True)
         mock_conn.send = MagicMock(side_effect=Exception("Send failed"))
         producer._connection = mock_conn
-        
+
         with caplog.at_level(logging.ERROR):
             with pytest.raises(Exception, match="Send failed"):
                 producer.send_message("/queue/test", {"test": "message"})
-        
+
         # Check that the error was logged
-        assert any("Failed to send message to /queue/test" in record.message for record in caplog.records)
+        assert any(
+            "Failed to send message to /queue/test" in record.message
+            for record in caplog.records
+        )
 
 
 # =============================================================================
 # Context Manager Tests
 # =============================================================================
+
 
 class TestContextManager:
     """Tests for context manager functionality."""
@@ -705,11 +749,11 @@ class TestContextManager:
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.connect = MagicMock()
         mock_conn.disconnect = MagicMock()
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             with producer:
                 mock_conn.connect.assert_called_once()
-            
+
             mock_conn.disconnect.assert_called_once()
 
     def test_context_manager_returns_producer(self):
@@ -717,7 +761,7 @@ class TestContextManager:
         producer = ArtemisProducer()
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.is_connected = MagicMock(return_value=True)
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             with producer as p:
                 assert p is producer
@@ -728,12 +772,12 @@ class TestContextManager:
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.connect = MagicMock()
         mock_conn.disconnect = MagicMock()
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             with pytest.raises(RuntimeError):
                 with producer:
                     raise RuntimeError("Test error")
-            
+
             mock_conn.disconnect.assert_called_once()
 
     def test_enter_calls_connect(self):
@@ -741,10 +785,10 @@ class TestContextManager:
         producer = ArtemisProducer()
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.connect = MagicMock()
-        
+
         with patch.object(producer, "_create_connection", return_value=mock_conn):
             producer.__enter__()
-            
+
             mock_conn.connect.assert_called_once()
 
     def test_exit_calls_disconnect(self):
@@ -752,11 +796,11 @@ class TestContextManager:
         producer = ArtemisProducer()
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.disconnect = MagicMock()
-        
+
         producer._connection = mock_conn
-        
+
         producer.__exit__(None, None, None)
-        
+
         mock_conn.disconnect.assert_called_once()
 
     def test_exit_does_not_suppress_exception(self):
@@ -764,10 +808,10 @@ class TestContextManager:
         producer = ArtemisProducer()
         mock_conn = MagicMock(spec=stomp.Connection)
         mock_conn.disconnect = MagicMock()
-        
+
         producer._connection = mock_conn
-        
+
         result = producer.__exit__(RuntimeError, RuntimeError("test"), None)
-        
+
         # Should return False to not suppress the exception
         assert result is False

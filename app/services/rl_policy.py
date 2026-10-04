@@ -1,5 +1,6 @@
 """Inference and schedule constraints for exported notification policies."""
 
+import hashlib
 import json
 import math
 from dataclasses import dataclass
@@ -7,6 +8,9 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
+
+from app.rl.learner import TrainingConfig
+from app.rl.replay import read_replay
 
 CLOCK_FIELDS = (
     "sin_minute",
@@ -229,7 +233,9 @@ def safe_actions(
         cap_week,
         weekday,
     )
-    skip = _can_finish(items, minute + grid, sent_day, sent_week, *common)
+    remaining_blackout = max(blackout - since_last - grid, 0)
+    earliest_skip = minute + grid + grid * math.ceil(remaining_blackout / grid)
+    skip = _can_finish(items, earliest_skip, sent_day, sent_week, *common)
     send = can_send and _can_finish(
         items[1:], minute + spacing, sent_day + 1, sent_week + 1, *common
     )
@@ -242,19 +248,43 @@ class PolicyArtifact:
     """Evaluate a versioned constrained conservative Double DQN weight file."""
 
     def __init__(
-        self, metadata: dict, weights: list[np.ndarray], biases: list[np.ndarray]
+        self,
+        metadata: dict,
+        weights: list[np.ndarray],
+        biases: list[np.ndarray],
+        offline=None,
     ):
         self.metadata = metadata
         self.weights = weights
         self.biases = biases
+        self.offline = offline or []
 
     @property
     def version(self) -> str:
         """Return the policy name and training-sample identifier."""
-        return (
+        base = (
             f"con_cddqn-{self.metadata['device']}-"
             f"{self.metadata['sample_sha256'][:12]}"
         )
+        if "model_sha256" in self.metadata:
+            base += f"-model-{self.metadata['model_sha256'][:12]}"
+        configuration = {
+            key: value
+            for key, value in self.metadata.items()
+            if key
+            not in (
+                "learner_revision",
+                "source_decisions",
+                "source_run",
+                "runtime_training_defaults",
+            )
+        }
+        config_hash = hashlib.sha256(
+            json.dumps(configuration, sort_keys=True).encode()
+        ).hexdigest()
+        base += f"-config-{config_hash[:12]}"
+        revision = self.metadata.get("learner_revision")
+        return f"{base}-online-{revision}" if revision else base
 
     @classmethod
     def load(cls, stem: Path) -> "PolicyArtifact":
@@ -264,10 +294,59 @@ class PolicyArtifact:
             raise ValueError("Unsupported policy artifact format")
         if metadata.get("device") not in {"nonwearer", "wearer"}:
             raise ValueError("Unsupported policy device")
+        sample_hash = metadata.get("sample_sha256", "")
+        if (
+            not isinstance(sample_hash, str)
+            or len(sample_hash) != 64
+            or any(char not in "0123456789abcdef" for char in sample_hash)
+        ):
+            raise ValueError("Invalid policy training sample checksum")
         expected = state_fields(metadata.get("device") == "wearer")
         if tuple(metadata.get("fields", ())) != expected:
             raise ValueError("Policy state fields do not match the runtime")
-        with np.load(stem.with_suffix(".npz"), allow_pickle=False) as archive:
+        TrainingConfig.from_metadata(metadata)
+        grid = metadata.get("grid_min")
+        if not isinstance(grid, int) or grid <= 0 or 1440 % grid:
+            raise ValueError("Policy grid must divide one day")
+        for key in (
+            "cap_per_day",
+            "cap_per_week",
+            "history_window",
+            "response_window_min",
+        ):
+            value = metadata.get(key)
+            if (
+                not isinstance(value, (int, float))
+                or not np.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"Invalid policy setting: {key}")
+        for key in (
+            "blackout_min",
+            "floor_per_day",
+            "floor_per_week",
+            "delay_decay",
+            "send_q_margin",
+        ):
+            value = metadata.get(key)
+            if (
+                not isinstance(value, (int, float))
+                or not np.isfinite(value)
+                or value < 0
+            ):
+                raise ValueError(f"Invalid policy setting: {key}")
+        for key in ("quiet_hour_start", "quiet_hour_end"):
+            value = metadata.get(key)
+            if not isinstance(value, int) or not 0 <= value < 24:
+                raise ValueError(f"Invalid quiet hour: {key}")
+        if not 0 <= metadata.get("rating_weight", -1) <= 1:
+            raise ValueError("Invalid rating weight")
+        model_path = stem.with_suffix(".npz")
+        checksum = hashlib.sha256(model_path.read_bytes()).hexdigest()
+        if metadata.get("model_sha256", checksum) != checksum:
+            raise ValueError("Policy weight checksum mismatch")
+        metadata["model_sha256"] = checksum
+        with np.load(model_path, allow_pickle=False) as archive:
             layers = sorted(
                 int(key.split("_")[1])
                 for key in archive.files
@@ -279,14 +358,31 @@ class PolicyArtifact:
             biases = [archive[f"bias_{index}"].copy() for index in layers]
         width = len(expected)
         for weight, bias in zip(weights, biases):
-            if weight.shape != (width, len(bias)) or not np.isfinite(weight).all():
+            if (
+                bias.ndim != 1
+                or weight.shape != (width, bias.size)
+                or not np.isfinite(weight).all()
+            ):
                 raise ValueError("Invalid policy network dimensions")
             if not np.isfinite(bias).all():
                 raise ValueError("Invalid policy network bias")
             width = len(bias)
         if width != 2:
             raise ValueError("Policy network must return two action values")
-        return cls(metadata, weights, biases)
+        if metadata.get("hidden_layers", len(weights) - 1) != len(weights) - 1 or any(
+            bias.size != metadata.get("hidden_units", bias.size) for bias in biases[:-1]
+        ):
+            raise ValueError("Policy architecture does not match metadata")
+        offline = []
+        if "offline_replay_sha256" in metadata:
+            replay_path = stem.with_suffix(".replay.npz")
+            if (
+                hashlib.sha256(replay_path.read_bytes()).hexdigest()
+                != metadata["offline_replay_sha256"]
+            ):
+                raise ValueError("Offline replay checksum mismatch")
+            offline = read_replay(replay_path, len(expected))
+        return cls(metadata, weights, biases, offline)
 
     def action_values(self, observation: np.ndarray) -> np.ndarray:
         """Return skip and send action values for one state vector."""
@@ -300,6 +396,8 @@ class PolicyArtifact:
             output = output @ weight + bias
             if index < len(self.weights) - 1:
                 output = np.maximum(output, 0)
+        if not np.isfinite(output).all():
+            raise ValueError("Nonfinite policy action values")
         return output
 
     def decide(self, observation: np.ndarray, mask: tuple[bool, bool]) -> int:

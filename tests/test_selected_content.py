@@ -26,7 +26,7 @@ load_dotenv()
 
 DATABASE_URL = (
     f"postgresql://{os.getenv('POSTGRES_USER')}:"
-    f"{os.getenv('POSTGRES_PASSWORD')}@db:5432/"
+    f"{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST', 'db')}:{os.getenv('POSTGRES_PORT', '5432')}/"
     f"{os.getenv('POSTGRES_DB')}_test"
 )
 engine = create_engine(DATABASE_URL)
@@ -52,7 +52,7 @@ def client():
     # Ensure the actual database exists (happens once per container lifecycle).
     bootstrap_engine = create_engine(
         f"postgresql://{os.getenv('POSTGRES_USER')}:"
-        f"{os.getenv('POSTGRES_PASSWORD')}@db:5432/postgres"
+        f"{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST', 'db')}:{os.getenv('POSTGRES_PORT', '5432')}/postgres"
     )
     with bootstrap_engine.connect() as conn:
         conn.execution_options(isolation_level="AUTOCOMMIT")

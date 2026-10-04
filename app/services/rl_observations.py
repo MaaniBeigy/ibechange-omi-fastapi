@@ -46,6 +46,7 @@ def observed_history(
             Event.user_id == user_id,
             Event.event_name.in_(("notification_sent", "notification_opened")),
             Event.event_start_time <= _to_naive_utc(now_utc),
+            Event.created_at <= now_utc,
             Event.is_deleted == False,
             Event.is_virtual == False,
         )

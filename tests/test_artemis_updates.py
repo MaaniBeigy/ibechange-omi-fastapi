@@ -419,6 +419,9 @@ class RacingSession:
     def add(self, row):
         pass
 
+    def execute(self, statement, parameters):
+        pass
+
     def commit(self):
         raise IntegrityError("insert", {}, Exception("duplicate key"))
 
@@ -471,6 +474,9 @@ def test_unexpected_commit_failure_rolls_back_valid_and_invalid_messages(monkeyp
         def add(self, row):
             pass
 
+        def execute(self, statement, parameters):
+            pass
+
         def commit(self):
             raise OSError("database unavailable")
 
@@ -519,6 +525,9 @@ def test_open_arriving_first_is_used_only_after_response_window(database):
     with Session(database) as db:
         process_artemis_message({"notification_opened": opened}, "opened", db)
         process_artemis_message({"notification_sent": sent}, "sent", db)
+        for event in db.exec(select(Event)).all():
+            event.created_at = event.event_start_time.replace(tzinfo=timezone.utc)
+        db.flush()
         early = observed_history(
             db,
             sent["user_uuid"],
@@ -610,6 +619,12 @@ def test_sent_confirmation_links_to_policy_decision(database):
         db.refresh(decision)
         event = db.exec(select(Event)).one()
         assert decision.outcome_event_id == event.id
+        process_artemis_message(
+            {"notification_sent": messages()["notification_sent"]},
+            "same-delivery-new-broker-id",
+            db,
+        )
+        assert len(db.exec(select(Event)).all()) == 1
         later = json.loads(json.dumps(messages()["notification_sent"]))
         later["created_at"] = (sent_at + timedelta(minutes=1)).isoformat()
         process_artemis_message({"notification_sent": later}, "sent-again", db)
@@ -635,6 +650,9 @@ def test_observed_history_ignores_an_unmatched_open(database):
     with Session(database) as db:
         process_artemis_message({"notification_sent": sent}, "history-sent", db)
         process_artemis_message({"notification_opened": opened}, "history-open", db)
+        for event in db.exec(select(Event)).all():
+            event.created_at = event.event_start_time.replace(tzinfo=timezone.utc)
+        db.flush()
         history = observed_history(
             db,
             sent["user_uuid"],

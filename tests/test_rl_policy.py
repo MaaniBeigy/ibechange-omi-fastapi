@@ -232,11 +232,13 @@ def artifact_files(tmp_path):
 
     def write(metadata_change=None, arrays_change=None):
         current_metadata = dict(metadata)
+        current_metadata.pop("model_sha256", None)
         current_arrays = {key: value.copy() for key, value in arrays.items()}
         if metadata_change:
             current_metadata.update(metadata_change)
         if arrays_change:
             arrays_change(current_arrays)
+            current_metadata.pop("model_sha256", None)
         (tmp_path / "policy.json").write_text(json.dumps(current_metadata))
         np.savez(tmp_path / "policy.npz", **current_arrays)
         return tmp_path / "policy"
@@ -342,3 +344,27 @@ def test_daily_runner_validates_grid_start_and_unfinished_queue(monkeypatch):
     )
     with pytest.raises(InfeasibleQueueError, match="before midnight"):
         plan_daily_queue(policy, item, 1425, 0, 0, 0, 240, 0, [], [], None)
+
+
+@pytest.mark.parametrize(
+    "settings,error",
+    [
+        ({"grid_min": 17}, "grid"),
+        ({"cap_per_day": 0}, "setting"),
+        ({"send_q_margin": -1}, "setting"),
+        ({"quiet_hour_end": 24}, "quiet hour"),
+        ({"rating_weight": 2}, "rating weight"),
+        ({"sample_sha256": "invalid"}, "sample checksum"),
+        ({"hidden_layers": 8}, "architecture"),
+    ],
+)
+def test_artifact_rejects_invalid_runtime_settings(artifact_files, settings, error):
+    with pytest.raises(ValueError, match=error):
+        PolicyArtifact.load(artifact_files(settings))
+
+
+def test_finite_input_cannot_silently_produce_infinite_action_values():
+    policy = PolicyArtifact({"fields": ["x"]}, [np.full((1, 2), 1e308)], [np.zeros(2)])
+    with np.errstate(over="ignore"):
+        with pytest.raises(ValueError, match="Nonfinite"):
+            policy.action_values(np.asarray([1e308]))

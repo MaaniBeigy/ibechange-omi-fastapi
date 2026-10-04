@@ -28,16 +28,83 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
     ports:
       - "3200:3200"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
-    volumes:
-      - .:/app
-      - ./htmlcov:/app/htmlcov
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3200/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  migrate:
+    build:
+      context: .
+      target: runtime
+    command: ["python", "-m", "app.bootstrap"]
+    env_file: [.env]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  artemis-consumer:
+    build:
+      context: .
+      target: runtime
+    command: ["python", "-m", "app.artemis_consumer"]
+    env_file: [.env]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  policy-worker:
+    build:
+      context: .
+      target: runtime
+    command: ["python", "-m", "app.policy_worker"]
+    env_file: [.env]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  test-db:
+    image: postgres:15
+    profiles: [checks]
+    environment:
+      POSTGRES_USER: omi_test
+      POSTGRES_PASSWORD: omi_test
+      POSTGRES_DB: omi_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omi_test -d omi_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  tests:
+    build:
+      context: .
+      target: development
+    profiles: [checks]
+    environment:
+      POSTGRES_USER: omi_test
+      POSTGRES_PASSWORD: omi_test
+      POSTGRES_DB: omi_test
+      POSTGRES_HOST: test-db
+      POSTGRES_PORT: 5432
+      TEST_DATABASE_URL: postgresql://omi_test:omi_test@test-db:5432/omi_test
+      POLICY_LEARNING_MODE: frozen
+    depends_on:
+      test-db:
+        condition: service_healthy
+    command: ["sh", "-c", "black --check app scripts tests migrations && isort --check-only app scripts tests migrations && pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=99 tests/"]
 
   metabase:
     image: metabase/metabase:latest

@@ -13,6 +13,7 @@ from app.models.recommendation import Recommendation
 from app.models.selected_content import SelectedContent
 from app.models.user import User
 from app.schemas.selected_content import SelectedContentCreate, SelectedContentList
+from app.services.policy_learning_service import lock_user
 from app.utils.helpers import _to_utc
 
 router = APIRouter(prefix="/selected_contents", tags=["Selected Contents"])
@@ -28,7 +29,8 @@ def create_selected_contents(
     db: Session = Depends(get_db),
 ):
     with db.no_autoflush:  # Disable autoflush for the entire operation
-        for user_id, content in selected_contents.items():
+        for user_id, content in sorted(selected_contents.items()):
+            lock_user(db, user_id)
             logger.debug(f"Processing user_id: {user_id}")
 
             # Check if user exists, create if not

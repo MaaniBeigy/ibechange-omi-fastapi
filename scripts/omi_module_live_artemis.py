@@ -11,14 +11,15 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 import os
+import ssl
+import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+
 import requests
 import stomp
-import ssl
-import uuid
 
 # ---------------------------------- Configurations  ----------------------------------
 logging.basicConfig(
@@ -30,15 +31,19 @@ logging.Formatter.converter = time.gmtime  # enforce UTC)
 
 # ---------------------------------- Define variables ---------------------------------
 
-CS_BASE = os.getenv("CS_BASE_URL", "http://cs_module:8000")
-OMI_BASE = os.getenv("OMI_BASE_URL", "http://localhost:3200")
+CS_BASE = os.getenv("CS_BASE_URL", "http://cs_module:8000").strip()
+OMI_BASE = os.getenv("OMI_BASE_URL", "http://172.31.20.104:3200").strip()
 EUT_BASE = os.getenv("EUT_PRE_BASE_URL")
 EUT_TOKEN = os.getenv("EUT_PRE_TOKEN")
 HEADERS_EUT = {"Authorization": f"Basic {EUT_TOKEN}"} if EUT_TOKEN else {}
-HEADERS_EUT_POST = {
-    "Authorization": f"Basic {EUT_TOKEN}",
-    "Content-Type": "application/json",
-} if EUT_TOKEN else {"Content-Type": "application/json"}
+HEADERS_EUT_POST = (
+    {
+        "Authorization": f"Basic {EUT_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    if EUT_TOKEN
+    else {"Content-Type": "application/json"}
+)
 HEADERS_CS = {"Content-Type": "application/json"}
 HEADERS_OMI = {"Content-Type": "application/json"}
 CATCH_UP_INTERVENTION_DAYS = 4
@@ -49,30 +54,34 @@ ARTEMIS_PORT = int(os.getenv("ARTEMIS_PORT", "61616"))
 ARTEMIS_USER = os.getenv("ARTEMIS_USER")
 ARTEMIS_PASSWORD = os.getenv("ARTEMIS_PASSWORD")
 ARTEMIS_CA_CERT = os.getenv("ARTEMIS_CA_CERT")
-ARTEMIS_QUEUE_NOTIFICATION_PLANS = os.getenv("ARTEMIS_QUEUE_NOTIFICATION_PLANS", "omi.notification_plans")
+ARTEMIS_QUEUE_NOTIFICATION_PLANS = os.getenv(
+    "ARTEMIS_QUEUE_NOTIFICATION_PLANS", "omi.notification_plans"
+)
 
 # Validate required Artemis configuration
 if not all([ARTEMIS_HOST, ARTEMIS_USER, ARTEMIS_PASSWORD]):
-    raise ValueError("ARTEMIS_HOST, ARTEMIS_USER, and ARTEMIS_PASSWORD environment variables are required")
+    raise ValueError(
+        "ARTEMIS_HOST, ARTEMIS_USER, and ARTEMIS_PASSWORD environment variables are required"
+    )
 
 
 # ---------------------------------- Artemis Producer Helper -------------------------
 
+
 class ArtemisProducer:
     """Helper class to send messages to Artemis queue."""
-    
+
     def __init__(self):
         self.connection = None
         self.message_count = 0
         self._setup_connection()
-    
+
     def _setup_connection(self):
         """Setup STOMP connection with SSL."""
         self.connection = stomp.Connection(
-            host_and_ports=[(ARTEMIS_HOST, ARTEMIS_PORT)],
-            heartbeats=(10000, 10000)
+            host_and_ports=[(ARTEMIS_HOST, ARTEMIS_PORT)], heartbeats=(10000, 10000)
         )
-        
+
         # Configure SSL if CA certificate is provided
         if ARTEMIS_CA_CERT:
             settings = {
@@ -81,33 +90,35 @@ class ArtemisProducer:
                 "ssl_version": ssl.PROTOCOL_TLS_CLIENT,
             }
             self.connection.transport.set_ssl(**settings)
-    
+
     def connect(self):
         """Connect to Artemis broker."""
         if not self.connection or not self.connection.is_connected():
             self._setup_connection()
             self.connection.connect(ARTEMIS_USER, ARTEMIS_PASSWORD, wait=True)
-            logging.info("Connected to Artemis broker at %s:%s", ARTEMIS_HOST, ARTEMIS_PORT)
-    
+            logging.info(
+                "Connected to Artemis broker at %s:%s", ARTEMIS_HOST, ARTEMIS_PORT
+            )
+
     def disconnect(self):
         """Disconnect from Artemis broker."""
         if self.connection and self.connection.is_connected():
             self.connection.disconnect()
             logging.info("Disconnected from Artemis broker")
-    
+
     def send_message(self, destination, message_body, message_type="notification_plan"):
         """Send a message to Artemis queue."""
         self.connect()
-        
+
         message_id = f"omi-{uuid.uuid4()}"
         body = json.dumps(message_body, default=str)
-        
+
         headers = {
             "message-id": message_id,
             "persistent": "true",
             "type": message_type,
         }
-        
+
         try:
             self.connection.send(
                 body=body,
@@ -115,18 +126,28 @@ class ArtemisProducer:
                 headers=headers,
             )
             self.message_count += 1
-            logging.info("Sent %s message %s to %s (total: %d)", message_type, message_id, destination, self.message_count)
+            logging.info(
+                "Sent %s message %s to %s (total: %d)",
+                message_type,
+                message_id,
+                destination,
+                self.message_count,
+            )
             return message_id
         except Exception as e:
-            logging.error("Failed to send %s message to %s: %s", message_type, destination, str(e))
+            logging.error(
+                "Failed to send %s message to %s: %s", message_type, destination, str(e)
+            )
             self.disconnect()
             raise
+
 
 # Global producer instance
 artemis_producer = ArtemisProducer()
 
 
 # ---------------------------------- Original Helper Functions ------------------------
+
 
 def _eut_get(path: str, params: dict | None = None):
     if not EUT_BASE:
@@ -210,16 +231,17 @@ def build_url(base: str, path: str) -> str:
 
 # ---------------------------------- Modified Function for Artemis --------------------
 
+
 def set_notification_plans_artemis(**context):
     """Fetch notification plans and emit to Artemis queue instead of posting to EUT.
-    
+
     This is the ONLY function that broadcasts to Artemis.
     Recommendation plans are internal to OMI and used to generate notification plans.
     """
     start = (datetime.now(timezone.utc) + timedelta(hours=1)).astimezone(timezone.utc)
     end = (start + timedelta(hours=1)).astimezone(timezone.utc)
     params = {"start_time": naive_utc_iso(start), "end_time": naive_utc_iso(end)}
-    
+
     data = _omi_get("/notification_plans", params=params)
     logging.info("Retrieved notification_plans payload:")
     logging.info(json.dumps(data, indent=2))
@@ -231,7 +253,7 @@ def set_notification_plans_artemis(**context):
     for user_id, bucket in data.items():
         if not user_id or not bucket or not bucket.get("contents"):
             continue
-        
+
         artemis_message = {
             "notification_plan": {
                 "user_id": str(user_id),
@@ -240,16 +262,20 @@ def set_notification_plans_artemis(**context):
                 "end_time": end.isoformat(),
             }
         }
-        
+
         try:
             artemis_producer.send_message(
                 f"/queue/{ARTEMIS_QUEUE_NOTIFICATION_PLANS}",
                 artemis_message,
-                "notification_plan"
+                "notification_plan",
             )
-            logging.info("Successfully emitted notification plan for user %s to Artemis", user_id)
+            logging.info(
+                "Successfully emitted notification plan for user %s to Artemis", user_id
+            )
         except Exception as e:
-            logging.error("Failed to emit notification plan for user %s: %s", user_id, str(e))
+            logging.error(
+                "Failed to emit notification plan for user %s: %s", user_id, str(e)
+            )
             raise
 
 
@@ -417,7 +443,10 @@ if __name__ == "__main__":
         artemis_producer.disconnect()
 
         if artemis_producer.message_count > 0:
-            logging.info("Artemis broadcast summary: %d notification_plan messages sent", artemis_producer.message_count)
+            logging.info(
+                "Artemis broadcast summary: %d notification_plan messages sent",
+                artemis_producer.message_count,
+            )
         else:
             logging.info("No Artemis messages broadcast")
 
