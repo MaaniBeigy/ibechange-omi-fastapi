@@ -1,0 +1,968 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   data-diagram-type="DESCRIPTION"
+   style="width:887px;height:715px;background:#FFFFFF;"
+   width="887px"
+   height="715px"
+   viewBox="0 0 887 715"
+   zoomAndPan="magnify"
+   preserveAspectRatio="none"
+   contentStyleType="text/css"
+   id="svg64"
+   sodipodi:docname="omi-internal-components.svg"
+   inkscape:export-filename="omi-internal-components.png"
+   inkscape:export-xdpi="300"
+   inkscape:export-ydpi="300"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview64"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:export-bgcolor="#ffffffff"
+     inkscape:zoom="1.1594406"
+     inkscape:cx="443.31725"
+     inkscape:cy="357.5"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg64" />
+<?plantuml 1.2026.9?>  <defs
+     id="defs1" />
+  <g
+     font-family="sans-serif"
+     lengthAdjust="spacing"
+     id="g64">
+    <!--cluster OMI-->
+    <g
+       class="cluster"
+       data-qualified-name="OMI"
+       id="ent0001"
+       data-source-line="14">
+      <rect
+         x="7"
+         y="7"
+         width="784"
+         height="694.78"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:1;"
+         id="rect1" />
+      <rect
+         x="771"
+         y="12"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:1;"
+         id="rect2" />
+      <rect
+         x="769"
+         y="14"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:1;"
+         id="rect3" />
+      <rect
+         x="769"
+         y="18"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:1;"
+         id="rect4" />
+      <text
+         x="242.382"
+         y="32.995"
+         fill="#000"
+         font-size="14"
+         textLength="313.236"
+         font-weight="700"
+         font-family="Arial"
+         id="text4">Opportune Moment Identification (OMI)</text>
+    </g>
+    <!--entity API-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.API"
+       id="ent0002"
+       data-source-line="15">
+      <rect
+         x="406.66"
+         y="42"
+         width="102.672"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect5" />
+      <rect
+         x="489.332"
+         y="47"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect6" />
+      <rect
+         x="487.332"
+         y="49"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect7" />
+      <rect
+         x="487.332"
+         y="53"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect8" />
+      <text
+         x="421.66"
+         y="74.995"
+         fill="#000"
+         font-size="14"
+         textLength="62.672"
+         font-family="Arial"
+         id="text8">HTTP API</text>
+    </g>
+    <!--entity Worker-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Worker"
+       id="ent0003"
+       data-source-line="16">
+      <rect
+         x="133.27"
+         y="42"
+         width="133.468"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect9" />
+      <rect
+         x="246.738"
+         y="47"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect10" />
+      <rect
+         x="244.738"
+         y="49"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect11" />
+      <rect
+         x="244.738"
+         y="53"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect12" />
+      <text
+         x="148.27"
+         y="74.995"
+         fill="#000"
+         font-size="14"
+         textLength="93.468"
+         font-family="Arial"
+         id="text12">Policy worker</text>
+    </g>
+    <!--entity Consumer-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Consumer"
+       id="ent0004"
+       data-source-line="17">
+      <rect
+         x="22.77"
+         y="121.3"
+         width="164.462"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect13" />
+      <rect
+         x="167.232"
+         y="126.3"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect14" />
+      <rect
+         x="165.232"
+         y="128.3"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect15" />
+      <rect
+         x="165.232"
+         y="132.3"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect16" />
+      <text
+         x="37.77"
+         y="154.295"
+         fill="#000"
+         font-size="14"
+         textLength="124.462"
+         font-family="Arial"
+         id="text16">Update consumer</text>
+    </g>
+    <!--entity Plan-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Plan"
+       id="ent0005"
+       data-source-line="18">
+      <rect
+         x="537.23"
+         y="200.59"
+         width="185.53"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect17" />
+      <rect
+         x="702.76"
+         y="205.59"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect18" />
+      <rect
+         x="700.76"
+         y="207.59"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect19" />
+      <rect
+         x="700.76"
+         y="211.59"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect20" />
+      <text
+         x="552.23"
+         y="233.585"
+         fill="#000"
+         font-size="14"
+         textLength="145.53"
+         font-family="Arial"
+         id="text20">Notification planning</text>
+    </g>
+    <!--entity Policy-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Policy"
+       id="ent0006"
+       data-source-line="19">
+      <rect
+         x="155.32"
+         y="346.89"
+         width="135.368"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect21" />
+      <rect
+         x="270.688"
+         y="351.89"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect22" />
+      <rect
+         x="268.688"
+         y="353.89"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect23" />
+      <rect
+         x="268.688"
+         y="357.89"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect24" />
+      <text
+         x="170.32"
+         y="379.885"
+         fill="#000"
+         font-size="14"
+         textLength="95.368"
+         font-family="Arial"
+         id="text24">Policy service</text>
+    </g>
+    <!--entity Observations-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Observations"
+       id="ent0007"
+       data-source-line="20">
+      <rect
+         x="341.08"
+         y="346.89"
+         width="179.85"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect25" />
+      <rect
+         x="500.93"
+         y="351.89"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect26" />
+      <rect
+         x="498.93"
+         y="353.89"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect27" />
+      <rect
+         x="498.93"
+         y="357.89"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect28" />
+      <text
+         x="356.08"
+         y="379.885"
+         fill="#000"
+         font-size="14"
+         textLength="139.85"
+         font-family="Arial"
+         id="text28">Observation service</text>
+    </g>
+    <!--entity Learning-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Learning"
+       id="ent0008"
+       data-source-line="21">
+      <rect
+         x="301.41"
+         y="493.19"
+         width="197.179"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect29" />
+      <rect
+         x="478.589"
+         y="498.19"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect30" />
+      <rect
+         x="476.589"
+         y="500.19"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect31" />
+      <rect
+         x="476.589"
+         y="504.19"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect32" />
+      <text
+         x="316.41"
+         y="526.185"
+         fill="#000"
+         font-size="14"
+         textLength="157.179"
+         font-family="Arial"
+         id="text32">Policy learning service</text>
+    </g>
+    <!--entity Learner-->
+    <g
+       class="entity"
+       data-qualified-name="OMI.Learner"
+       id="ent0009"
+       data-source-line="22">
+      <rect
+         x="256.71"
+         y="639.48"
+         width="174.572"
+         height="46.297"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect33" />
+      <rect
+         x="411.282"
+         y="644.48"
+         width="15"
+         height="10"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect34" />
+      <rect
+         x="409.282"
+         y="646.48"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect35" />
+      <rect
+         x="409.282"
+         y="650.48"
+         width="4"
+         height="2"
+         fill="#FFF"
+         style="stroke:#333;stroke-width:0.5;"
+         id="rect36" />
+      <text
+         x="271.71"
+         y="672.475"
+         fill="#000"
+         font-size="14"
+         textLength="134.572"
+         font-family="Arial"
+         id="text36">ConCDDQN learner</text>
+    </g>
+    <!--link API to Plan-->
+    <g
+       class="link"
+       data-entity-1="ent0002"
+       data-entity-2="ent0005"
+       id="lnk10"
+       data-source-line="24"
+       data-link-type="dependency">
+      <path
+         d="M482.64,88.58 C515.34,118.35 569.033,167.234 601.703,196.984"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="API-to-Plan" />
+      <polygon
+         points="605.4,200.35,601.439,191.333,601.703,196.984,596.052,197.248,605.4,200.35"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon36" />
+      <text
+         x="600.275"
+         y="141.435"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text37">«call»</text>
+      <text
+         x="565.46"
+         y="157.732"
+         fill="#000"
+         font-size="14"
+         textLength="110.817"
+         font-family="Arial"
+         id="text38">plan generation</text>
+    </g>
+    <!--link API to Learning-->
+    <g
+       class="link"
+       data-entity-1="ent0002"
+       data-entity-2="ent0008"
+       id="lnk11"
+       data-source-line="25"
+       data-link-type="dependency">
+      <path
+         d="M509.44,68.59 C558.82,73.1 633.7,85.78 688,121.3 C739.77,155.16 759.61,186.13 748,246.89 C734.88,315.59 736.8,341.21 690,393.19 C640.38,448.3 566.667,478.006 503.827,494.976"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="API-to-Learning" />
+      <polygon
+         points="499,496.28,508.732,497.795,503.827,494.976,506.646,490.072,499,496.28"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon38" />
+      <text
+         x="786.394"
+         y="293.885"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text39">«call»</text>
+      <text
+         x="742.87"
+         y="310.182"
+         fill="#000"
+         font-size="14"
+         textLength="128.235"
+         font-family="Arial"
+         id="text40">lock/close episode</text>
+    </g>
+    <!--link API to Policy-->
+    <g
+       class="link"
+       data-entity-1="ent0002"
+       data-entity-2="ent0006"
+       id="lnk12"
+       data-source-line="26"
+       data-link-type="dependency">
+      <path
+         d="M439.81,88.5 C410.11,125.98 351.01,204.79 316,279.89 C309.34,294.17 315.35,301.21 306,313.89 C296.35,326.98 286.826,335.217 273.276,343.787"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="API-to-Policy" />
+      <polygon
+         points="269.05,346.46,278.794,345.03,273.276,343.787,274.518,338.269,269.05,346.46"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon40" />
+      <text
+         x="387.76"
+         y="220.735"
+         fill="#000"
+         font-size="14"
+         textLength="48.966"
+         font-family="Arial"
+         id="text41">«read»</text>
+      <text
+         x="360.56"
+         y="237.032"
+         fill="#000"
+         font-size="14"
+         textLength="103.366"
+         font-family="Arial"
+         id="text42">policy artifacts</text>
+    </g>
+    <!--link Worker to Plan-->
+    <g
+       class="link"
+       data-entity-1="ent0003"
+       data-entity-2="ent0005"
+       id="lnk13"
+       data-source-line="27"
+       data-link-type="dependency">
+      <path
+         d="M237.88,88.75 C277.23,111.41 341.17,145.96 400,167.59 C443.93,183.75 489.462,195.399 531.872,204.519"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Worker-to-Plan" />
+      <polygon
+         points="536.76,205.57,528.802,199.767,531.872,204.519,527.12,207.588,536.76,205.57"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon42" />
+      <text
+         x="435.815"
+         y="141.435"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text43">«call»</text>
+      <text
+         x="401"
+         y="157.732"
+         fill="#000"
+         font-size="14"
+         textLength="110.817"
+         font-family="Arial"
+         id="text44">plan generation</text>
+    </g>
+    <!--link Worker to Learning-->
+    <g
+       class="link"
+       data-entity-1="ent0003"
+       data-entity-2="ent0008"
+       id="lnk14"
+       data-source-line="28"
+       data-link-type="dependency">
+      <path
+         d="M198.61,88.52 C197.03,109.21 193.87,140.74 188,167.59 C165.88,268.73 75.44,305.2 130,393.19 C152.1,428.82 250.779,467.011 322.999,491.211"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Worker-to-Learning" />
+      <polygon
+         points="327.74,492.8,320.477,486.148,322.999,491.211,317.935,493.733,327.74,492.8"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon44" />
+      <text
+         x="163.664"
+         y="293.885"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text45">«call»</text>
+      <text
+         x="133.88"
+         y="310.182"
+         fill="#000"
+         font-size="14"
+         textLength="100.755"
+         font-family="Arial"
+         id="text46">prepare policy</text>
+    </g>
+    <!--link Worker to Policy-->
+    <g
+       class="link"
+       data-entity-1="ent0003"
+       data-entity-2="ent0006"
+       id="lnk15"
+       data-source-line="29"
+       data-link-type="dependency">
+      <path
+         d="M199.03,88.48 C197.63,131.17 196.92,222.27 215,246.89 C238.01,278.22 274.31,247.63 296,279.89 C304.43,292.43 302.73,300.36 296,313.89 C289.42,327.11 282.046,335.1 270.156,343.61"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Worker-to-Policy" />
+      <polygon
+         points="266.09,346.52,275.737,344.535,270.156,343.61,271.081,338.029,266.09,346.52"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon46" />
+      <text
+         x="243.2"
+         y="220.735"
+         fill="#000"
+         font-size="14"
+         textLength="48.966"
+         font-family="Arial"
+         id="text47">«read»</text>
+      <text
+         x="216"
+         y="237.032"
+         fill="#000"
+         font-size="14"
+         textLength="103.366"
+         font-family="Arial"
+         id="text48">policy artifacts</text>
+    </g>
+    <!--link Plan to Learning-->
+    <g
+       class="link"
+       data-entity-1="ent0005"
+       data-entity-2="ent0008"
+       id="lnk16"
+       data-source-line="30"
+       data-link-type="dependency">
+      <path
+         d="M613.16,247.2 C606.49,256.88 599.19,268.56 594,279.89 C585.32,298.84 556.07,444.8 542,460.19 C529.06,474.34 516.631,482.873 498.911,490.733"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Plan-to-Learning" />
+      <polygon
+         points="494.34,492.76,504.189,492.767,498.911,490.733,500.945,485.454,494.34,492.76"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon48" />
+      <text
+         x="606.784"
+         y="367.035"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text49">«call»</text>
+      <text
+         x="577"
+         y="383.332"
+         fill="#000"
+         font-size="14"
+         textLength="100.755"
+         font-family="Arial"
+         id="text50">prepare policy</text>
+    </g>
+    <!--link Plan to Observations-->
+    <g
+       class="link"
+       data-entity-1="ent0005"
+       data-entity-2="ent0007"
+       id="lnk17"
+       data-source-line="31"
+       data-link-type="dependency">
+      <path
+         d="M574.06,247.32 C555.13,256.17 534.39,267.24 517,279.89 C490.39,299.24 468.073,323.461 451.843,342.911"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Plan-to-Observations" />
+      <polygon
+         points="448.64,346.75,457.477,342.403,451.843,342.911,451.335,337.277,448.64,346.75"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon50" />
+      <text
+         x="518"
+         y="293.885"
+         fill="#000"
+         font-size="14"
+         textLength="57.545"
+         font-family="Arial"
+         id="text51">«query»</text>
+      <text
+         x="522.696"
+         y="310.182"
+         fill="#000"
+         font-size="14"
+         textLength="48.152"
+         font-family="Arial"
+         id="text52">history</text>
+    </g>
+    <!--link Plan to Policy-->
+    <g
+       class="link"
+       data-entity-1="ent0005"
+       data-entity-2="ent0006"
+       id="lnk18"
+       data-source-line="32"
+       data-link-type="dependency">
+      <path
+         d="M536.83,241.28 C464.05,254.56 372.54,272.23 356,279.89 C333.89,290.13 332.98,299.94 313,313.89 C296.77,325.22 282.508,334.229 266.478,343.839"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Plan-to-Policy" />
+      <polygon
+         points="262.19,346.41,271.966,345.213,266.478,343.839,267.852,338.352,262.19,346.41"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon52" />
+      <text
+         x="383.243"
+         y="293.885"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text53">«call»</text>
+      <text
+         x="357"
+         y="310.182"
+         fill="#000"
+         font-size="14"
+         textLength="93.673"
+         font-family="Arial"
+         id="text54">decide epoch</text>
+    </g>
+    <!--link Plan to Policy-->
+    <!--link Learning to Policy-->
+    <g
+       class="link"
+       data-entity-1="ent0008"
+       data-entity-2="ent0006"
+       id="lnk19"
+       data-source-line="33"
+       data-link-type="dependency">
+      <path
+         d="M360.66,492.89 C345.29,483.48 327.83,472 313,460.19 C287.2,439.63 264.138,416.218 246.638,397.328"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Learning-to-Policy" />
+      <polygon
+         points="243.24,393.66,246.422,402.981,246.638,397.328,252.291,397.544,243.24,393.66"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon54" />
+      <text
+         x="318.368"
+         y="440.185"
+         fill="#000"
+         font-size="14"
+         textLength="48.966"
+         font-family="Arial"
+         id="text55">«read»</text>
+      <text
+         x="314"
+         y="456.482"
+         fill="#000"
+         font-size="14"
+         textLength="57.702"
+         font-family="Arial"
+         id="text56">artifacts</text>
+    </g>
+    <!--link Learning to Observations-->
+    <g
+       class="link"
+       data-entity-1="ent0008"
+       data-entity-2="ent0007"
+       id="lnk20"
+       data-source-line="34"
+       data-link-type="dependency">
+      <path
+         d="M404.81,492.95 C410.62,465.91 419.279,425.578 425.109,398.468"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Learning-to-Observations" />
+      <polygon
+         points="426.16,393.58,420.357,401.538,425.109,398.468,428.178,403.22,426.16,393.58"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon56" />
+      <text
+         x="453.812"
+         y="440.185"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text57">«call»</text>
+      <text
+         x="419.28"
+         y="456.482"
+         fill="#000"
+         font-size="14"
+         textLength="110.25"
+         font-family="Arial"
+         id="text58">event matching</text>
+    </g>
+    <!--link Observations to Learning-->
+    <!--link Learning to Learner-->
+    <g
+       class="link"
+       data-entity-1="ent0008"
+       data-entity-2="ent0009"
+       id="lnk21"
+       data-source-line="35"
+       data-link-type="dependency">
+      <path
+         d="M391.25,539.88 C380.73,566.99 364.989,607.549 354.499,634.579"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Learning-to-Learner" />
+      <polygon
+         points="352.69,639.24,359.675,632.297,354.499,634.579,352.217,629.402,352.69,639.24"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon58" />
+      <text
+         x="402.684"
+         y="586.475"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text59">«call»</text>
+      <text
+         x="378.02"
+         y="602.772"
+         fill="#000"
+         font-size="14"
+         textLength="90.515"
+         font-family="Arial"
+         id="text60">learn/restore</text>
+    </g>
+    <!--link Learning to Learner-->
+    <!--link Policy to Learner-->
+    <g
+       class="link"
+       data-entity-1="ent0006"
+       data-entity-2="ent0009"
+       id="lnk22"
+       data-source-line="36"
+       data-link-type="dependency">
+      <path
+         d="M208.32,393.67 C188.65,427.08 158.87,490.89 183,539.48 C205.94,585.68 251.195,616.771 289.345,636.851"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Policy-to-Learner" />
+      <polygon
+         points="293.77,639.18,287.669,631.448,289.345,636.851,283.943,638.528,293.77,639.18"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon60" />
+      <text
+         x="205.301"
+         y="513.325"
+         fill="#000"
+         font-size="14"
+         textLength="48.966"
+         font-family="Arial"
+         id="text61">«read»</text>
+      <text
+         x="184"
+         y="529.622"
+         fill="#000"
+         font-size="14"
+         textLength="91.567"
+         font-family="Arial"
+         id="text62">config/replay</text>
+    </g>
+    <!--link Consumer to Learning-->
+    <g
+       class="link"
+       data-entity-1="ent0004"
+       data-entity-2="ent0008"
+       id="lnk23"
+       data-source-line="37"
+       data-link-type="dependency">
+      <path
+         d="M82.62,167.87 C74.83,177.19 67.04,188.62 63,200.59 C25.9,310.55 8.81,378.27 91,460.19 C122.44,491.52 244.33,485.21 288,493.19 C292.29,493.97 291.756,493.857 296.176,494.687"
+         style="stroke:#333;stroke-width:1;stroke-dasharray:7,7;"
+         fill="none"
+         id="Consumer-to-Learning" />
+      <polygon
+         points="301.09,495.61,292.983,490.018,296.176,494.687,291.506,497.88,301.09,495.61"
+         fill="#333"
+         style="stroke:#333;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"
+         id="polygon62" />
+      <text
+         x="50.75"
+         y="293.885"
+         fill="#000"
+         font-size="14"
+         textLength="41.187"
+         font-family="Arial"
+         id="text63">«call»</text>
+      <text
+         x="39.72"
+         y="310.182"
+         fill="#000"
+         font-size="14"
+         textLength="63.246"
+         font-family="Arial"
+         id="text64">lock user</text>
+    </g>
+    <!--link API to Worker-->
+    <!--link Worker to Consumer-->
+    <!--link Policy to Observations-->
+<?plantuml-src ZPHDRzim38Rl_XL4TzaERVVL7OOYG9PYM80soT0EEsmxA38J2v55Zv8RTCF--oJvexAN3iaXiSb7v4kHZDqfKmaM9KWgAp9etArxq0XrgLzdjlVQGkIqLsOB6w4j9XwcskIIs233oyIUuqRKsdqaunQYH9Yo4lgm_rRzGdZrDd6kXTnjO-GPQMBO5ygbINkn7uu6YNFa1dhs9duIRCfC-wUSXdAqMC55MXuBiml6TnUPemeSmPgS8r-NOfHEaScoFZcSBAkAsDK6uORAO9dd_bjjb1I1XUVBc_cB4n0M_0FypW2Imv_kxbOmNSsZt_yElIlIIZx0ddY7796lyN58VQbouT1RZAtBbfkrBqDoGOckIWjZVDiZl_8l1tDRv7ibiO6YQOWjru5e8gPiOhS70siK7D8FJbstnk49NypiwkhpeZdJLdZTF6SUzVS6PsUJM0IyXyjBARIUJBwRK29iqMDHI89sYGQu9haxbvei0bRA-jb8WpUo0yyeyXY-CGdsjoga2tKs_JbMJK8V55Gn-f54gBgBJyCVfIUAE3v-ZwVjYqT-riWFuKoXh2CUm8cKBdAEKkNX6aaM7kspFw4ybJnW_z7H9S3xC1gbSB9evcLmh1sEONU3xPmno0-DRMMCyKwINwUDsdhUjorKsstK_yS7QliuawVV2fNxFuCVhBQ5EtrSthQDOt-ojF5kn_v-_rhfO_zevmPtDsQJJUkBESXuEN_-0W00?>  </g>
+</svg>

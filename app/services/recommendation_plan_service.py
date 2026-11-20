@@ -182,7 +182,7 @@ def generate_recommendation_plan(
     db: Session,
     deadline_resolver: DeadlineResolver | None = None,
 ) -> RecommendationPlan | None:
-    """Persist one deterministic policy decision for the latest queue epoch."""
+    """Persist one policy decision and its probability for the latest queue epoch."""
     if selected.is_deleted:
         return None
     deadline_resolver = deadline_resolver or resolve_reminder_deadline
@@ -369,6 +369,12 @@ def generate_recommendation_plan(
             + (MIN_REMINDERS_PER_DAY if "reminder" in available_kinds else 0)
         ),
         floor_week=0,
+        exploration_seed=int.from_bytes(
+            hashlib.sha256(
+                f"{user.id}:{epoch.isoformat()}:{policy.metadata.get('seed', 0)}".encode()
+            ).digest()[:8],
+            "big",
+        ),
     )
     index, key, content = occurrences[0]
     policy_version = f"{decision.policy_version}-omi2x2-v1"
@@ -378,7 +384,7 @@ def generate_recommendation_plan(
         occurrence_index=index,
         decided_at=epoch,
         action=decision.action,
-        propensity=1.0,
+        propensity=decision.propensity,
         state=decision.state.tolist(),
         safe_mask=list(decision.safe_mask),
         policy_version=policy_version,

@@ -6,6 +6,70 @@
 [![License: CC-BY-4.0-International](<https://img.shields.io/badge/License-CC%20BY%204.0-blue.svg>)](LICENSE)
 [![coverage report](docs/coverage.svg)](docs/review-verification.md#validation)
 
+OMI selects when to send the next item in the ordered iBeChange content queue.
+The delivered algorithm is constrained conservative Double DQN (ConCDDQN).
+It learns from confirmed deliveries and observed openings while the action mask
+enforces quiet hours, spacing, queue order, delivery limits and reminder deadlines.
+FastAPI, a real-time policy worker and an Artemis consumer share PostgreSQL.
+The [implementation guide](docs/implementation.md) describes the selected settings,
+formal-component mapping, shared offline replay and simulation reproduction.
+
+## Implementation diagrams
+
+The editable sources are PlantUML files. The SVG files below are rendered locally.
+
+The module view follows the project architecture in
+[workflow-modules.drawio](docs/diagrams/workflow-modules.drawio). Arrows point
+from the producer to the consumer of each data flow and carry a verb stereotype
+(«provide», «serve», «post», «call», «read», «query», «broadcast», «listen»,
+«persist»); external module internals are outside this repository.
+
+![iBeChange modules: component view](docs/diagrams/omi-components.svg)
+
+*Module view.* The iBeChange modules and their integration dependencies. Oura
+provides wearable data to xCare; the mobile client and the Virtual User call
+the xCare HTTP API. The Cronicle Orchestrator gets the ordered selected content
+from CS and posts it to OMI (POST /selected_contents/), then fetches
+GET /notification_plans/ from OMI and posts the plans to the VU, which takes
+the notification-delivery role here. OMI also broadcasts its plans to the
+Artemis broker; the broker never publishes — modules only listen or broadcast to it. OMI listens to mission schedules and events from the broker, and the VU broadcasts mission schedules and user events to the broker and listens to notification plans from it.
+
+[Component source](docs/diagrams/omi-components.puml)
+
+![OMI implementation: component view](docs/diagrams/omi-internal-components.svg)
+
+*OMI internals.* Only the OMI boundary and its eight internal components are shown. The HTTP API and the policy worker are the two triggers: each asks Notification planning to generate a plan and reads the Policy service's artifacts, while the worker also has the Policy learning service prepare the policy and the API locks/closes episodes through it; the Update consumer takes the same per-user lock via the learning service when ingesting Artemis messages. Notification planning queries the Observation service for the user's delivery history and calls the Policy service to decide the epoch. The Policy learning service reads the Policy service's artifacts, matches sent/opened events through the Observation service, and drives the ConCDDQN learner (learn/restore/checkpoint); the Policy service reads the learner's training configuration and replay format. External integration (CS, orchestrator, Artemis broker, delivery service) is covered by the module view.
+
+[Internal component source](docs/diagrams/omi-internal-components.puml)
+
+![Decision and delayed learning sequence](docs/diagrams/omi-learning-sequence.svg)
+
+*Learning sequence.* One decision epoch end to end: lock the participant,
+prepare the policy (release closed outcomes, optionally fit the personal
+learner), choose a safe wait/send action, persist the decision and plan; broker
+confirmations later release the delayed reward.
+
+[Sequence source](docs/diagrams/omi-learning-sequence.puml)
+
+![Learning classes and durable records](docs/diagrams/omi-learning-classes.svg)
+
+*Learning classes.* The serving policy (PolicyArtifact) and the learner
+(ConstrainedConservativeDoubleDQN with Network and TrainingConfig) with typed
+attributes and methods, plus the PostgreSQL tables (PolicyDecision,
+PolicyTransition, PolicyLearner) that persist decisions, the replay ledger and
+per-user optimizer checkpoints.
+
+[Class source](docs/diagrams/omi-learning-classes.puml)
+
+Recreate the SVG files from the repository root with Docker and PlantUML's SVG
+output option. On PowerShell, use `${PWD}` in the volume argument.
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work \
+  ghcr.io/plantuml/plantuml@sha256:9b5071ab56a4192aac458ab4b0d42261c22c8109695894ae5be6013c3be6cac1 \
+  -tsvg 'docs/diagrams/*.puml'
+```
+
 # Data model
 
 ![data-model](docs/data_model.svg)
@@ -20,8 +84,17 @@ for per-user fitting or `frozen` for a fixed trial policy.
 ```bash
 docker volume create metabase_data
 docker compose up --build -d
-docker compose logs app
+docker compose logs -f app policy-worker artemis-consumer
 docker compose down
+```
+
+Watch the components and inspect the decisions they record (propensities are
+stored per decision; use the credentials from your `.env` — `.env.example`
+uses `omi_user`/`omi_db`):
+
+```bash
+docker compose logs -f app policy-worker artemis-consumer
+docker compose exec db psql -U omi_user -d omi_db -c "SELECT user_id, decided_at, action, propensity, policy_version FROM \"PolicyDecision\" ORDER BY decided_at DESC LIMIT 20;"
 ```
 
 Compose runs bootstrap/migrations before the API, Artemis consumer and policy
@@ -37,17 +110,32 @@ application database:
 docker compose --profile checks run --build --rm tests
 ```
 
-For local development, install `requirements-dev.txt`, point `POSTGRES_*` and
-`TEST_DATABASE_URL` at a test PostgreSQL instance, and run:
-
-```bash
-black --check app scripts tests migrations
-isort --check-only app scripts tests migrations
-pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=99 tests/
-```
+The `tests` service above already runs black, isort and the pytest suite with
+coverage against the disposable test database, so no local toolchain is needed.
 
 The [review verification](docs/review-verification.md) evaluates every RL review
 finding. [RL persistence](docs/rl-data-model.md) supplements the earlier diagram.
+Current implementation checks are recorded in
+[docs/verification/README.md](docs/verification/README.md).
+
+### Runtime services
+
+The runtime requires PostgreSQL 15; the container uses Python 3.13 with the
+dependencies in `requirements.txt` (development checks add
+`requirements-dev.txt`). FastAPI/Uvicorn serve HTTP, SQLModel/SQLAlchemy and
+Alembic manage persistence, `stomp.py` consumes broker messages, and NumPy
+implements the network and optimizer. A GPU is unnecessary.
+
+All long-lived processes run as Compose services started by
+`docker compose up --build -d`: the API (`app`, port 3200), the Artemis
+consumer (`artemis-consumer`, queue from `ARTEMIS_QUEUE`) and the policy
+worker (`policy-worker`); migrations run first via the `migrate` service.
+
+The API schema is available at `/docs`. `POSTGRES_*` selects the database,
+`ARTEMIS_*` selects the assigned broker queue and optional TLS files,
+`POLICY_TIMEZONE` sets local delivery days, and `ARTEMIS_SCHEDULE_TIMEZONE`
+interprets offset-free task timestamps. `POLICY_ARTIFACT_DIR` optionally selects
+an alternative artifact directory. Restart the processes after changing artifacts.
 
 ### Selected Content
 
@@ -106,13 +194,12 @@ curl "http://localhost:3200/notification_plans/?start_time=2025-12-03T17:00:00&e
 ### Artemis updates
 
 The `/updates` HTTP endpoint has been replaced by a STOMP consumer. Set the
-`ARTEMIS_*` variables in `.env`, including the queue assigned to this service,
-then apply the database migration and start the consumer as a separate process.
-Compose initializes fresh databases and migrates existing installations.
+`ARTEMIS_*` variables in `.env`, including the queue assigned to this service
+(`ARTEMIS_QUEUE`), then start it with Compose; migrations run first:
 
 ```bash
-python -m app.bootstrap
-python -m app.artemis_consumer --queue int.ibechange.update::tue-updates-int
+docker compose up --build -d artemis-consumer
+docker compose logs -f artemis-consumer
 ```
 
 Each message has one top-level event key. For example:
@@ -142,42 +229,79 @@ Invalid messages are recorded in `ArtemisFailure` before acknowledgement.
 
 ### Policy artifacts
 
-The `app/policy_artifacts` directory contains exported `con_cddqn` weights for
-participants with and without wearable inputs. Their bundled metadata records fitting on 20,000
-simulated behavior decisions per state width from the RL project's
-`data/learn/wearable_940/decisions.csv.gz`, using 2,000 offline updates and seed
-`20260928`. The JSON files record state fields, source paths, configuration,
-and a hash of the training sample. The application needs only NumPy to load the
-weights. Both artifacts are checked when the API starts, and startup fails if
-either file is missing or has an incompatible state layout. Recreating them
-uses the local runtime and a behavior log with reward arm **A** (engagement plus
-unopened-send cost). The current reference run at the historical path may use
-arm F; it cannot reconstruct the original sample from that run. Use an explicit
-arm-A log and its matching run metadata:
+The `app/policy_artifacts` directory contains separate 32-input and 36-input
+models for nonwearers and wearers, each with one 64-unit ReLU hidden layer and
+two action values. Each model was fitted with 2,000 offline updates on 20,000
+simulated behavior transitions, using seed `20261104` and
+[the selected configuration](configs/omi_concddqn.json). The sample covers all
+900 nonwearers and 40 wearers in the archived cohort. Sampling within each
+participant's recorded timeline is random and reproducible; nonwearers contribute
+22 or 23 transitions each and wearers contribute 500 each. All four simulated
+behavior profiles are represented in each device dataset. Profile labels describe
+training coverage only; the service selects a model using wearable status alone.
+
+The exported replay is shared by new participants with the corresponding device
+status. Every online batch contains eight shared offline transitions and 24
+transitions from the current RCT participant. A new participant needs no personal
+pretrial history, pilot identity match or cluster assignment. Each participant
+receives their own copy of the initial weights and has separate online replay
+and optimizer state. The JSON files record configuration, state order and hashes
+of the sample, source run, weights, replay and detailed sampling records.
+Startup validates both models and the required replay archives.
+
+Recreate the bundled artifacts from the existing research run. The
+`export-artifacts` Compose service assumes the research checkout is the
+sibling directory `notification-reward-engineering` (the parent directory is
+mounted at `/research`) and writes to `build/policy_artifacts`:
 
 ```bash
-python -m scripts.train_policy_artifacts \
-  --log /path/to/arm-a/decisions.csv.gz \
-  --run /path/to/arm-a/run.json \
-  --out app/policy_artifacts --limit 20000 --steps 2000 --seed 20260928
+docker compose --profile tools run --build --rm export-artifacts
 ```
 
+The exporter accepts reward arm A or F. For F, it removes the recorded volume
+and pacing contributions using the source run settings and the logged delivery
+count, then checks the recovered engagement and unopened-send reward. It rejects
+incompatible state or constraint settings. The current bundled models use F logs.
+
 `POLICY_LEARNING_MODE=online` starts a separate learner for each user and device
-from these weights. Its replay, target network, Adam state, refit cadence and
+from these weights. Its replay, target network, Adam state, refit day and
 random-generator state persist in PostgreSQL. Confirmed `notification_sent`
 events provide delivery evidence, and matched opens provide engagement after
 the response window closes. The reward combines engagement and unopened-send
 cost, with elapsed-time discounting and CQL over feasible actions. Every decision
 records its exact model/configuration revision. `frozen` records outcomes while
-keeping serving weights fixed. The local runtime's source license and hashes are
+using the fixed bundled artifact, without fitting or exploration. It does not
+serve a previously fitted participant checkpoint in frozen mode.
+The local runtime's source license and hashes are
 in [app/rl/NOTICE.md](app/rl/NOTICE.md).
 
-New exports include complete training settings and optional offline replay.
-The bundled artifacts have no replay archive, so live fitting initially samples
-only each user's own released transitions. Their previously missing settings
-are identified by `runtime_training_defaults` in the metadata. Raw Oura readings
-need a calibrated mapping to the model's standardized channels; until one is
+Online action selection uses epsilon-greedy exploration within the safe action
+set, decreasing from 0.05 to 0.01 over 90 days. Each decision records its exact
+action probability; a forced action has probability one. The greedy rule sends
+when the send value exceeds the wait value by more than 0.5.
+
+Fitting starts after at least 32 online transitions have been released and the
+daily refit interval has elapsed. The shared offline archive remains fixed while
+the participant's online replay grows. Missing shared replay is an error; the
+service does not silently switch to online-only batches. Raw Oura readings need
+a calibrated mapping to the model's standardized channels; until one is
 provided, wearers use the model's missing-reading block.
+
+The daily learning check is independent of PostgreSQL and Artemis. It runs the
+actual network and policy with explicitly artificial response probabilities
+and four ordered items each day. Run both modes through the `tools` Compose
+profile; outputs land in `build/online` and `build/frozen`:
+
+```bash
+docker compose --profile tools run --build --rm learning-check
+docker compose --profile tools run --build --rm learning-check-frozen
+```
+
+Its CSV records daily sends, openings, fitting reward and cumulative gradient
+updates. The JSON reports weight hashes and constraint violations. The response
+probabilities in this check are artificial. Reproduction of the calibrated DBN
+experiments uses the separate research simulator and is documented in the
+[implementation guide](docs/implementation.md#reproducing-the-calibrated-simulation-studies).
 
 These weights use the research simulator's two item classes. The application
 maps resources to its recommendation class and keeps reminders in the deadline

@@ -1,0 +1,49 @@
+@startuml
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam backgroundColor white
+skinparam componentBackgroundColor white
+skinparam componentBorderColor #333333
+skinparam ArrowColor #333333
+skinparam nodesep 50
+skinparam ranksep 65
+top to bottom direction
+
+component "Oura data service" as Oura
+component "Mobile client" as Mobile
+component "xCare" as XCare
+database "MongoDB\nxCare document store" as Mongo
+component "Virtual User (VU)" as VU
+component "Orchestrator" as Orchestrator
+component "Opportune Moment\nIdentification (OMI)" as OMI
+component "Content Selection (CS)\nPOLIMI" as CS
+component "Wearable Data\nAggregation" as Wearables
+component "Artemis broker" as Broker
+
+Oura .down.> XCare : <<provide>>\nwearable data
+Mobile .down.> XCare : <<call>>\nGET / POST
+VU ..> XCare : <<call>>\nHTTP API
+XCare .down.> Mongo : <<persist>>\ndocuments
+
+CS ..> Orchestrator : <<serve>>\nselected content
+Orchestrator ..> OMI : <<post>>\nPOST /selected_contents/
+OMI ..> Orchestrator : <<serve>>\nGET /notification_plans/
+Orchestrator ..> VU : <<post>>\nnotification plans
+Orchestrator ..> Wearables : <<call>>\nHTTP API
+
+OMI ..> Broker : <<broadcast>>\nnotification plans
+OMI ..> Broker : <<listen>>\nmission schedules (STOMP)
+OMI ..> Broker : <<listen>>\nevents (STOMP)
+VU ..> Broker : <<broadcast>>\nmission schedules\nuser events
+VU ..> Broker : <<listen>>\nnotification plans
+
+Oura -[hidden]right- Mobile
+Mobile -[hidden]right- XCare
+XCare -[hidden]right- VU
+OMI -[hidden]right- CS
+CS -[hidden]right- Wearables
+Wearables -[hidden]right- Broker
+@enduml

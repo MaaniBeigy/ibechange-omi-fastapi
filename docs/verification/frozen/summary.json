@@ -1,0 +1,14 @@
+{
+  "purpose": "Software learning check with artificial response probabilities; no pilot calibration",
+  "mode": "frozen",
+  "days": 14,
+  "seed": 11,
+  "artifact_version": "con_cddqn-nonwearer-c95810123fc5-model-6dc532bcfea7-config-c9952a7174c5",
+  "gradient_updates": 0,
+  "constraint_violations": 0,
+  "weights_changed": false,
+  "initial_parameter_sha256": "71d1124ce7363fbeb448c4e86c7961fd0734e89b65905dc50c863dc3a1cec303",
+  "final_parameter_sha256": "71d1124ce7363fbeb448c4e86c7961fd0734e89b65905dc50c863dc3a1cec303",
+  "pending_transitions": 0,
+  "sends": 56
+}

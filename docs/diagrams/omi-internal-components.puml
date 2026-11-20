@@ -1,0 +1,47 @@
+@startuml
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam backgroundColor white
+skinparam componentBackgroundColor white
+skinparam componentBorderColor #333333
+skinparam ArrowColor #333333
+skinparam nodesep 50
+skinparam ranksep 65
+top to bottom direction
+
+component "Opportune Moment Identification (OMI)" as OMI {
+  component "HTTP API" as API
+  component "Policy worker" as Worker
+  component "Update consumer" as Consumer
+  component "Notification planning" as Plan
+  component "Policy service" as Policy
+  component "Observation service" as Observations
+  component "Policy learning service" as Learning
+  component "ConCDDQN learner" as Learner
+
+  API ..> Plan : <<call>>\nplan generation
+  API ..> Learning : <<call>>\nlock/close episode
+  API ..> Policy : <<read>>\npolicy artifacts
+  Worker ..> Plan : <<call>>\nplan generation
+  Worker ..> Learning : <<call>>\nprepare policy
+  Worker ..> Policy : <<read>>\npolicy artifacts
+  Plan ..> Learning : <<call>>\nprepare policy
+  Plan ..> Observations : <<query>>\nhistory
+  Plan ..> Policy : <<call>>\ndecide epoch
+  Learning ..> Policy : <<read>>\nartifacts
+  Learning ..> Observations : <<call>>\nevent matching
+  Learning ..> Learner : <<call>>\nlearn/restore
+  Policy ..> Learner : <<read>>\nconfig/replay
+  Consumer ..> Learning : <<call>>\nlock user
+
+  API -[hidden]right- Worker
+  Worker -[hidden]right- Consumer
+  Plan -[hidden]right- Policy
+  Policy -[hidden]right- Observations
+  Observations -[hidden]right- Learning
+  Learning -[hidden]right- Learner
+}
+@enduml

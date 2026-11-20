@@ -5,6 +5,7 @@ import csv
 import gzip
 import hashlib
 import json
+from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
@@ -17,17 +18,22 @@ from app.services.rl_policy import PolicyArtifact, state_fields
 
 
 def training_values(overrides: dict) -> dict:
-    """Resolve the inspected source registry's runtime subset without notifsim."""
+    """Resolve the selected runtime settings without importing the simulator."""
     values = {f"agent.{key}": value for key, value in asdict(TrainingConfig()).items()}
     values.update(
         {
             "agent.grid_min": 15,
             "agent.blackout_min": 60.0,
-            "agent.hidden_units": 32,
+            "agent.hidden_units": 64,
             "agent.hidden_layers": 1,
-            "agent.history_window": 20,
+            "agent.history_window": 160,
             "agent.skip_prior": 0.0,
-            "agent.con_cddqn_send_q_margin": 0.0,
+            "agent.con_cddqn_send_q_margin": 0.5,
+            "agent.epsilon_online": 0.05,
+            "agent.epsilon_final": 0.01,
+            "agent.exploration_days": 90,
+            "agent.weight_volume": 0.1,
+            "agent.weight_pace": 0.1,
             "policy.quiet_hour_start": 22,
             "policy.quiet_hour_end": 7,
             "policy.floor_per_day": 2,
@@ -44,7 +50,11 @@ def training_values(overrides: dict) -> dict:
 
 
 def _training_row(
-    row: dict, fields: tuple[str, ...], weight_engagement: float, weight_miss: float
+    row: dict,
+    fields: tuple[str, ...],
+    weight_engagement: float,
+    weight_miss: float,
+    source_values: dict | None = None,
 ) -> dict:
     """Rebuild a replay transition from one logged decision."""
     state = json.loads(row["state"])
@@ -52,6 +62,18 @@ def _training_row(
     action = int(row["action"])
     opened = bool(int(row["opened"]))
     reward = float(row["reward"])
+    arm = row.get("arm", "A")
+    if arm not in {"A", "F"}:
+        raise ValueError("Training rows must use arm A or F")
+    source_values = source_values or training_values({})
+    if arm == "F" and action:
+        cap = int(source_values["policy.cap_per_day"])
+        count = cap * (1 - state["day_budget_left"]) + 1
+        if not np.isclose(count, round(count)) or not 1 <= round(count) <= cap:
+            raise ValueError("Invalid delivery count in full-reward log")
+        pace = round(count) / (cap * (cap + 1) / 2)
+        reward += float(source_values["agent.weight_volume"])
+        reward -= float(source_values["agent.weight_pace"]) * pace
     objectives = {
         "engagement": (
             reward / weight_engagement
@@ -67,6 +89,8 @@ def _training_row(
     )
     if not np.isclose(reward, reconstructed):
         raise ValueError("Decision reward does not match engagement and miss")
+    if not 0 <= objectives["engagement"] <= 1 + 1e-8:
+        raise ValueError("Reconstructed engagement is outside its range")
     elapsed = float(
         row.get("elapsed_min")
         or (state["week_remaining"] - next_state["week_remaining"]) * 10080.0
@@ -89,42 +113,109 @@ def _training_row(
 
 
 def collect_rows(
-    log_path: Path, fields_by_device: dict, values: dict, limit: int, scan_limit: int
-) -> tuple[dict, str]:
-    """Collect source behavior transitions for both state widths."""
-    rows = {name: [] for name in fields_by_device}
-    digest = hashlib.sha256()
+    log_path: Path,
+    fields_by_device: dict,
+    values: dict,
+    limit: int,
+    scan_limit: int,
+    cohorts: dict,
+    seed: int,
+) -> tuple[dict, dict]:
+    """Sample across every source participant and their observed timeline by device."""
+    participants = {device: {} for device in fields_by_device}
+    for cohort, details in sorted(cohorts.items()):
+        for index, wearer in enumerate(details["wearers"]):
+            device = "wearer" if wearer else "nonwearer"
+            participants[device][f"{cohort}/{index}"] = details["groups"][index]
+    allocations, generators, samples, counts, day_ranges = {}, {}, {}, Counter(), {}
+    for device, members in participants.items():
+        if len(members) < 2 or limit < len(members):
+            raise ValueError(
+                "Each device needs multiple source participants and at least one sample per participant"
+            )
+        keys = list(members)
+        np.random.default_rng(seed).shuffle(keys)
+        quota, remainder = divmod(limit, len(keys))
+        for index, key in enumerate(keys):
+            allocations[key] = quota + int(index < remainder)
+            participant_seed = int.from_bytes(
+                hashlib.sha256(f"{seed}:{key}".encode()).digest()[:8], "big"
+            )
+            generators[key] = np.random.default_rng(participant_seed)
+            samples[key] = []
+    expected_device = {
+        key: device for device, members in participants.items() for key in members
+    }
     with gzip.open(log_path, "rt", encoding="utf-8") as handle:
         for index, row in enumerate(csv.DictReader(handle)):
-            if index >= scan_limit:
+            if scan_limit and index >= scan_limit:
                 break
-            if (row["agent"], row["arm"], row["scale"]) != (
-                "observed",
-                "A",
-                "fielded",
+            if (
+                row["agent"] != "observed"
+                or row["arm"] not in {"A", "F"}
+                or row["scale"] != "fielded"
             ):
                 continue
-            state = json.loads(row["state"])
-            device = "wearer" if "wearable_present" in state else "nonwearer"
-            if len(rows[device]) >= limit:
-                continue
-            fields = fields_by_device[device]
-            rows[device].append(
-                _training_row(
-                    row,
-                    fields,
-                    float(values["agent.weight_engagement"]),
-                    float(values["agent.weight_miss"]),
-                )
+            key = f"{row['cell']}/{row['replicate']}/{row['participant']}"
+            if key not in allocations:
+                raise ValueError("Behavior participant is missing from run cohorts")
+            device = "wearer" if '"wearable_present"' in row["state"] else "nonwearer"
+            if device != expected_device[key]:
+                raise ValueError("Behavior device differs from run cohorts")
+            counts[key] += 1
+            day = int(row["day"])
+            previous = day_ranges.get(key, (day, day))
+            day_ranges[key] = (min(day, previous[0]), max(day, previous[1]))
+            slot = (
+                len(samples[key])
+                if counts[key] <= allocations[key]
+                else int(generators[key].integers(counts[key]))
             )
-            digest.update(json.dumps(row, sort_keys=True).encode("utf-8"))
-            if all(len(items) >= limit for items in rows.values()):
-                break
-    if any(len(items) < limit for items in rows.values()):
+            if slot >= allocations[key]:
+                continue
+            if slot == len(samples[key]):
+                samples[key].append(row)
+            else:
+                samples[key][slot] = row
+    if any(len(samples[key]) != count for key, count in allocations.items()):
         raise ValueError(
-            f"Insufficient behavior transitions: {dict((k, len(v)) for k, v in rows.items())}"
+            "Insufficient behavior transitions across the complete source cohort"
         )
-    return rows, digest.hexdigest()
+    rows, provenance = {}, {}
+    for device, members in participants.items():
+        raw = [row for key in sorted(members) for row in samples[key]]
+        digest = hashlib.sha256()
+        for row in raw:
+            digest.update(json.dumps(row, sort_keys=True).encode("utf-8"))
+        rows[device] = [
+            _training_row(
+                row,
+                fields_by_device[device],
+                float(values["agent.weight_engagement"]),
+                float(values["agent.weight_miss"]),
+                values,
+            )
+            for row in raw
+        ]
+        provenance[device] = dict(
+            method="participant_stratified_reservoir",
+            seed=seed,
+            source_participants=len(members),
+            sample_sha256=digest.hexdigest(),
+            behavior_profile_counts=dict(Counter(members.values())),
+            participants=[
+                dict(
+                    source_key=key,
+                    profile=members[key],
+                    available_transitions=counts[key],
+                    sampled_transitions=len(samples[key]),
+                    observed_days=day_ranges[key],
+                    sampled_days=sorted({int(row["day"]) for row in samples[key]}),
+                )
+                for key in sorted(members)
+            ],
+        )
+    return rows, provenance
 
 
 def export(
@@ -135,20 +226,46 @@ def export(
     scan_limit: int,
     steps: int,
     seed: int,
+    configuration: Path | None = None,
 ) -> None:
     """Fit the source agent and write versioned NumPy weight files."""
-    if min(limit, scan_limit, steps) < 1:
-        raise ValueError("Training limits and steps must be positive")
+    if min(limit, steps) < 1 or scan_limit < 0:
+        raise ValueError(
+            "Training limits and steps must be positive; scan limit may be zero"
+        )
     run = json.loads(run_path.read_text(encoding="utf-8"))
-    if run["arms"] != ["A"] or run["scales"] != ["fielded"]:
-        raise ValueError("Training log must use the engagement-plus-miss arm A")
-    values = training_values(run["overrides"])
+    if run["arms"] not in (["A"], ["F"]) or run["scales"] != ["fielded"]:
+        raise ValueError("Training log must use arm A or F at fielded scale")
+    source_values = training_values(run.get("overrides", {}))
+    cells = run.get("cell_parameters", {})
+    if len(cells) > 1:
+        raise ValueError("Export one simulator configuration at a time")
+    if cells:
+        source_values.update(next(iter(cells.values())))
+    values = dict(source_values)
+    if configuration is not None:
+        values.update(json.loads(configuration.read_text(encoding="utf-8")))
+    for key in (
+        "agent.grid_min",
+        "agent.blackout_min",
+        "policy.cap_per_day",
+        "policy.cap_per_week",
+        "agent.history_window",
+    ):
+        if values[key] != source_values[key]:
+            raise ValueError(f"Source observations or masks use a different {key}")
     fields_by_device = {
         "nonwearer": state_fields(False),
         "wearer": state_fields(True),
     }
-    rows_by_device, digest = collect_rows(
-        log_path, fields_by_device, values, limit, scan_limit
+    rows_by_device, provenance = collect_rows(
+        log_path,
+        fields_by_device,
+        source_values,
+        limit,
+        scan_limit,
+        run.get("cohorts", {}),
+        seed,
     )
     output.mkdir(parents=True, exist_ok=True)
     for device, rows in rows_by_device.items():
@@ -160,7 +277,16 @@ def export(
             "fields": fields,
             "source_decisions": str(log_path),
             "source_run": str(run_path),
-            "sample_sha256": digest,
+            "sample_sha256": provenance[device]["sample_sha256"],
+            "source_run_sha256": hashlib.sha256(run_path.read_bytes()).hexdigest(),
+            "source_reward_arm": run["arms"][0],
+            "offline_replay_scope": "shared_device",
+            "source_participants": provenance[device]["source_participants"],
+            "source_behavior_profile_counts": provenance[device][
+                "behavior_profile_counts"
+            ],
+            "sampling_method": provenance[device]["method"],
+            "scan_limit": scan_limit,
             "seed": seed,
             "transitions": len(rows),
             "pretrain_steps": steps,
@@ -184,6 +310,9 @@ def export(
             "response_window_min": values["engagement.window_min"],
             "delay_decay": values["engagement.delay_decay"],
             "rating_weight": values["engagement.rating_weight"],
+            "epsilon_online": values["agent.epsilon_online"],
+            "epsilon_final": values["agent.epsilon_final"],
+            "exploration_days": values["agent.exploration_days"],
         }
         metadata.update(
             {key: values[f"agent.{key}"] for key in TrainingConfig.__dataclass_fields__}
@@ -210,6 +339,12 @@ def export(
             {f"bias_{index}": bias for index, bias in enumerate(agent.online.biases)}
         )
         stem = output / f"con_cddqn_{device}"
+        stem.with_suffix(".sampling.json").write_text(
+            json.dumps(provenance[device], indent=2) + "\n", encoding="utf-8"
+        )
+        metadata["sampling_sha256"] = hashlib.sha256(
+            stem.with_suffix(".sampling.json").read_bytes()
+        ).hexdigest()
         np.savez_compressed(stem.with_suffix(".npz"), **weights)
         metadata["model_sha256"] = hashlib.sha256(
             stem.with_suffix(".npz").read_bytes()
@@ -230,12 +365,25 @@ def main() -> None:
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=20000)
-    parser.add_argument("--scan-limit", type=int, default=1000000)
+    parser.add_argument(
+        "--scan-limit",
+        type=int,
+        default=0,
+        help="Maximum log rows to inspect; zero reads the complete log",
+    )
     parser.add_argument("--steps", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--config", type=Path)
     args = parser.parse_args()
     export(
-        args.log, args.run, args.out, args.limit, args.scan_limit, args.steps, args.seed
+        args.log,
+        args.run,
+        args.out,
+        args.limit,
+        args.scan_limit,
+        args.steps,
+        args.seed,
+        args.config,
     )
 
 

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -257,7 +258,7 @@ class PolicyArtifact:
         self.metadata = metadata
         self.weights = weights
         self.biases = biases
-        self.offline = offline or []
+        self.offline = tuple(offline or ())
 
     @property
     def version(self) -> str:
@@ -274,6 +275,7 @@ class PolicyArtifact:
             if key
             not in (
                 "learner_revision",
+                "learning_day",
                 "source_decisions",
                 "source_run",
                 "runtime_training_defaults",
@@ -305,6 +307,7 @@ class PolicyArtifact:
         if tuple(metadata.get("fields", ())) != expected:
             raise ValueError("Policy state fields do not match the runtime")
         TrainingConfig.from_metadata(metadata)
+        exploration_probability(dict(metadata, learner_revision="validation"))
         grid = metadata.get("grid_min")
         if not isinstance(grid, int) or grid <= 0 or 1440 % grid:
             raise ValueError("Policy grid must divide one day")
@@ -374,6 +377,14 @@ class PolicyArtifact:
         ):
             raise ValueError("Policy architecture does not match metadata")
         offline = []
+        if "sampling_sha256" in metadata:
+            if (
+                hashlib.sha256(
+                    stem.with_suffix(".sampling.json").read_bytes()
+                ).hexdigest()
+                != metadata["sampling_sha256"]
+            ):
+                raise ValueError("Policy sampling checksum mismatch")
         if "offline_replay_sha256" in metadata:
             replay_path = stem.with_suffix(".replay.npz")
             if (
@@ -382,6 +393,8 @@ class PolicyArtifact:
             ):
                 raise ValueError("Offline replay checksum mismatch")
             offline = read_replay(replay_path, len(expected))
+        if metadata.get("offline_replay_scope") == "shared_device" and not offline:
+            raise ValueError("Shared device replay archive is required")
         return cls(metadata, weights, biases, offline)
 
     def action_values(self, observation: np.ndarray) -> np.ndarray:
@@ -415,7 +428,12 @@ class PolicyArtifact:
 @lru_cache(maxsize=1)
 def load_policy_artifacts() -> dict[str, PolicyArtifact]:
     """Load both deployed policies and check their network dimensions."""
-    directory = Path(__file__).resolve().parents[1] / "policy_artifacts"
+    directory = Path(
+        os.getenv(
+            "POLICY_ARTIFACT_DIR",
+            Path(__file__).resolve().parents[1] / "policy_artifacts",
+        )
+    )
     policies = {
         device: PolicyArtifact.load(directory / f"con_cddqn_{device}")
         for device in ("nonwearer", "wearer")
@@ -444,6 +462,20 @@ class EpochDecision:
     state: np.ndarray
     safe_mask: tuple[bool, bool]
     policy_version: str
+    propensity: float = 1.0
+
+
+def exploration_probability(metadata: dict) -> float:
+    """Use the selected exploration schedule only for a live fitted policy."""
+    if "learner_revision" not in metadata:
+        return 0.0
+    initial = float(metadata.get("epsilon_online", 0.05))
+    final = float(metadata.get("epsilon_final", 0.01))
+    horizon = float(metadata.get("exploration_days", 90))
+    if not 0 <= final <= initial <= 1 or not np.isfinite(horizon) or horizon <= 0:
+        raise ValueError("Invalid exploration schedule")
+    fraction = min(max(float(metadata.get("learning_day", 0)) / horizon, 0), 1)
+    return initial + fraction * (final - initial)
 
 
 @dataclass(frozen=True)
@@ -470,6 +502,7 @@ def decide_epoch(
     wearable: dict[str, float] | None = None,
     floor_day: int | None = None,
     floor_week: int | None = None,
+    exploration_seed: int | None = None,
 ) -> EpochDecision:
     """Choose a safe action using current measurements and the full queue."""
     config = policy.metadata
@@ -506,7 +539,15 @@ def decide_epoch(
         items,
         wearable,
     )
-    return EpochDecision(policy.decide(state, mask), state, mask, policy.version)
+    greedy = policy.decide(state, mask)
+    action, propensity = greedy, 1.0
+    epsilon = exploration_probability(config) if exploration_seed is not None else 0.0
+    if epsilon and mask == (True, True):
+        generator = np.random.default_rng(exploration_seed)
+        send_probability = (1 - epsilon) * greedy + epsilon / 2
+        action = int(generator.random() < send_probability)
+        propensity = send_probability if action else 1 - send_probability
+    return EpochDecision(action, state, mask, policy.version, propensity)
 
 
 def plan_daily_queue(

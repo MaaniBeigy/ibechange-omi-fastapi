@@ -64,7 +64,10 @@ def policy():
         updates_per_epoch=1,
     )
     return PolicyArtifact(
-        metadata, [p.copy() for p in base.weights], [p.copy() for p in base.biases]
+        metadata,
+        [p.copy() for p in base.weights],
+        [p.copy() for p in base.biases],
+        offline=base.offline,
     )
 
 

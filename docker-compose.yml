@@ -106,6 +106,37 @@ services:
         condition: service_healthy
     command: ["sh", "-c", "black --check app scripts tests migrations && isort --check-only app scripts tests migrations && pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=99 tests/"]
 
+
+  learning-check:
+    build:
+      context: .
+      target: development
+    profiles: [tools]
+    env_file: [.env]
+    volumes:
+      - .:/app
+    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--out", "build/online"]
+
+  learning-check-frozen:
+    build:
+      context: .
+      target: development
+    profiles: [tools]
+    env_file: [.env]
+    volumes:
+      - .:/app
+    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--mode", "frozen", "--out", "build/frozen"]
+
+  export-artifacts:
+    build:
+      context: .
+      target: development
+    profiles: [tools]
+    volumes:
+      - .:/app
+      - ..:/research
+    command: ["python", "-m", "scripts.train_policy_artifacts", "--log", "/research/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz", "--run", "/research/notification-reward-engineering/data/learn/wearable_940/run.json", "--config", "configs/omi_concddqn.json", "--out", "build/policy_artifacts", "--limit", "20000", "--scan-limit", "5000000", "--steps", "2000", "--seed", "20261104"]
+
   metabase:
     image: metabase/metabase:latest
     ports:

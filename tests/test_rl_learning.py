@@ -88,7 +88,7 @@ def test_double_target_uses_online_selection_target_evaluation_discount_and_mask
     learner.target.biases[0][...] = 0
     row = transition(
         next_safe_mask=[True, False],
-        elapsed_min=2880,
+        elapsed_min=1440,
         objectives={"engagement": 0.3, "miss": -1},
     )
     result = learner.update([row], 0.001, 0)
@@ -124,7 +124,7 @@ def test_cql_gradient_is_softmax_only_over_feasible_actions(monkeypatch, mask):
 
 
 def test_bounded_replay_mixing_pretraining_period_and_checkpoint_continuation():
-    policy = artifact()
+    policy = artifact(offline_batch_share=0.5)
     offline = [transition(objectives={"engagement": 0.8, "miss": 0})]
     learner = ConstrainedConservativeDoubleDQN(policy, seed=12, offline=offline)
     learner.pretrain(2)
@@ -248,6 +248,7 @@ def test_multi_layer_updates_match_original_constrained_cddqn_reference():
             device="nonwearer",
             sample_sha256="b" * 64,
             target_copy_interval=2,
+            discount_half_life_min=2880,
         ),
         parameters[::2],
         parameters[1::2],

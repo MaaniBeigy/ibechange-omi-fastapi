@@ -1,5 +1,6 @@
 """Release observable rewards and fit a participant's own stream transactionally."""
 
+import hashlib
 import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -248,8 +249,13 @@ def prepare_policy(
     db.flush()
     if mode == "frozen":
         return artifact
+    if (
+        TrainingConfig.from_metadata(artifact.metadata).offline_batch_share
+        and not artifact.offline
+    ):
+        raise ValueError("Online learning requires the shared device replay archive")
     learner = ConstrainedConservativeDoubleDQN(
-        artifact, seed=int(artifact.metadata.get("seed", 0)), offline=artifact.offline
+        artifact, seed=participant_seed(user_id, artifact)
     )
     stored = db.exec(
         select(PolicyLearner).where(
@@ -279,10 +285,14 @@ def prepare_policy(
             PolicyTransition.base_version == artifact.version,
             PolicyTransition.consumed_at != None,
         )
-        .order_by(PolicyTransition.consumed_at.desc(), PolicyTransition.id.desc())
+        .order_by(
+            PolicyTransition.consumed_at.desc(),
+            PolicyTransition.released_at.desc(),
+            PolicyTransition.id.desc(),
+        )
         .limit(learner.config.replay_capacity)
     ).all()
-    learner.store([_replay_row(row) for row in reversed(old)])
+    learner.restore_replay([_replay_row(row) for row in reversed(old)])
     fresh = db.exec(
         select(PolicyTransition)
         .where(
@@ -298,12 +308,18 @@ def prepare_policy(
         epoch.astimezone(zone).date()
         - _aware_utc(stored.started_at).astimezone(zone).date()
     ).days
+    learner.learn([_replay_row(row) for row in fresh], day)
     for row in fresh:
-        learner.learn([_replay_row(row)], day)
         row.consumed_at = epoch
-    # Owed steps can become due on a later day with no freshly released reward.
-    learner.learn([], day)
     stored.checkpoint = learner.checkpoint()
     stored.updated_at = epoch
-    metadata = dict(artifact.metadata, learner_revision=learner.revision)
+    metadata = dict(
+        artifact.metadata, learner_revision=learner.revision, learning_day=day
+    )
     return PolicyArtifact(metadata, learner.online.weights, learner.online.biases)
+
+
+def participant_seed(user_id, artifact: PolicyArtifact) -> int:
+    """Give each participant a reproducible training stream."""
+    key = f"{user_id}:{artifact.metadata.get('seed', 0)}"
+    return int.from_bytes(hashlib.sha256(key.encode()).digest()[:8], "big")

@@ -1,0 +1,143 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "Serving policy" {
+  class PolicyArtifact {
+    + metadata: dict
+    + weights: list[np.ndarray]
+    + biases: list[np.ndarray]
+    + offline: tuple[dict, ...]
+    + version: str {property}
+    + {static} load(stem: Path): PolicyArtifact
+    + action_values(observation: np.ndarray): np.ndarray
+    + decide(observation: np.ndarray, mask: tuple[bool, bool]): int
+  }
+}
+
+package "RL learner" {
+  class TrainingConfig {
+    + lr_offline: float = 0.001
+    + lr_online: float = 0.0001
+    + cql_alpha_offline: float = 5.0
+    + cql_alpha_online: float = 0.5
+    + batch_size: int = 32
+    + target_copy_interval: int = 100
+    + replay_capacity: int = 20000
+    + retrain_period_days: int = 1
+    + updates_per_epoch: int = 4
+    + offline_batch_share: float = 0.25
+    + discount_half_life_min: float = 1440.0
+    + weight_engagement: float = 1.0
+    + weight_miss: float = 0.15
+    + digest: str {property}
+    + {static} from_metadata(metadata: dict): TrainingConfig
+  }
+
+  class Network {
+    + weights: list[np.ndarray]
+    + biases: list[np.ndarray]
+    + moment: list[np.ndarray]
+    + velocity: list[np.ndarray]
+    + updates: int
+    + bias_out: np.ndarray {property}
+    + weight_out: np.ndarray {property}
+    + parameters(): list[np.ndarray]
+    + forward(features: np.ndarray): tuple[np.ndarray, list]
+    + values(features: np.ndarray): np.ndarray
+    + backward(features: np.ndarray, hidden: list, upstream: np.ndarray): list[np.ndarray]
+    + apply(gradients: list[np.ndarray], rate: float): None
+    + copy_into(other: Network): None
+  }
+
+  class ConstrainedConservativeDoubleDQN {
+    + config: TrainingConfig
+    + base_version: str
+    + width: int
+    + online: Network
+    + target: Network
+    + offline: list[dict]
+    + buffer: list[dict]
+    + write: int
+    + refit_day: int
+    + owed: int
+    + rng: np.random.Generator
+    + offline_source: str {"shared_device" | "none"}
+    + revision: str {property}
+    + store(rows: list[dict]): None
+    + pretrain(steps: int): None
+    + learn(rows: list[dict], day: int): None
+    + update(rows: list[dict], rate: float, alpha: float): dict
+    + checkpoint(): dict
+    + restore(checkpoint: dict): None
+    + restore_replay(rows: list[dict]): None
+  }
+}
+
+package "PostgreSQL tables" {
+  class PolicyDecision <<table>> {
+    + id: UUID «PK»
+    + user_id: UUID «FK User.id»
+    + plan_id: UUID «FK SelectedContent.id»
+    + occurrence_index: int
+    + decided_at: datetime
+    + action: int {0 = wait | 1 = send}
+    + propensity: float
+    + state: list[float] «JSONB»
+    + safe_mask: list[bool] «JSONB»
+    + policy_version: str
+    + outcome_event_id: UUID | None «FK Event.id»
+    + created_at: datetime
+  }
+
+  class PolicyTransition <<table>> {
+    + id: UUID «PK»
+    + user_id: UUID «FK User.id»
+    + decision_id: UUID «FK PolicyDecision.id»
+    + next_decision_id: UUID | None «FK PolicyDecision.id»
+    + device: str {"wearer" | "nonwearer"}
+    + base_version: str
+    + state: list[float] «JSONB»
+    + next_state: list[float] «JSONB»
+    + action: int {0 = wait | 1 = send}
+    + safe_mask: list[bool] «JSONB»
+    + next_safe_mask: list[bool] «JSONB»
+    + elapsed_min: float
+    + bootstrap: int {0 | 1}
+    + status: str {"pending" | "released" | "undelivered"}
+    + objectives: dict | None «JSONB»
+    + reward: float | None
+    + outcome_event_id: UUID | None «FK Event.id»
+    + opened_event_id: UUID | None «FK Event.id»
+    + released_at: datetime | None
+    + consumed_at: datetime | None
+    + created_at: datetime
+  }
+
+  class PolicyLearner <<table>> {
+    + id: UUID «PK»
+    + user_id: UUID «FK User.id»
+    + device: str {"wearer" | "nonwearer"}
+    + base_version: str
+    + checkpoint: dict «JSONB»
+    + started_at: datetime
+    + updated_at: datetime
+  }
+}
+
+PolicyArtifact ..> ConstrainedConservativeDoubleDQN : <<create>>\ninitializes online + target weights
+PolicyArtifact ..> TrainingConfig : <<validate>>\nfrom_metadata(metadata)
+ConstrainedConservativeDoubleDQN *-- "1" TrainingConfig : config
+ConstrainedConservativeDoubleDQN *-- "2" Network : online + target
+
+PolicyDecision "1" -- "0..1" PolicyTransition : decision_id «FK»
+PolicyTransition --> PolicyDecision : next_decision_id «FK», 0..1
+PolicyLearner "1" -- "0..*" PolicyTransition : user_id + base_version\n«ledger query, no FK»
+PolicyTransition ..> ConstrainedConservativeDoubleDQN : <<feed>>\nvalidated replay rows (learn/store)
+ConstrainedConservativeDoubleDQN ..> PolicyLearner : <<serialize>>\ncheckpoint()
+PolicyLearner ..> ConstrainedConservativeDoubleDQN : <<deserialize>>\nrestore(checkpoint)
+@enduml

@@ -15,19 +15,19 @@ from app.rl.network import Network
 
 @dataclass(frozen=True)
 class TrainingConfig:
-    """Source registry defaults; artifact metadata overrides each value."""
+    """Selected ConCDDQN settings; versioned artifact metadata overrides them."""
 
     lr_offline: float = 0.001
     lr_online: float = 0.0001
     cql_alpha_offline: float = 5.0
-    cql_alpha_online: float = 1.0
+    cql_alpha_online: float = 0.5
     batch_size: int = 32
     target_copy_interval: int = 100
     replay_capacity: int = 20000
     retrain_period_days: int = 1
     updates_per_epoch: int = 4
-    offline_batch_share: float = 0.5
-    discount_half_life_min: float = 2880.0
+    offline_batch_share: float = 0.25
+    discount_half_life_min: float = 1440.0
     weight_engagement: float = 1.0
     weight_miss: float = 0.15
 
@@ -116,11 +116,16 @@ class ConstrainedConservativeDoubleDQN:
         ):
             target[...] = source
         self.online.copy_into(self.target)
-        self.offline = [validate_transition(row, self.width) for row in (offline or [])]
+        self.offline = (
+            artifact.offline
+            if offline is None
+            else [validate_transition(row, self.width) for row in offline]
+        )
         self.buffer = []
         self.write = 0
         self.refit_day = 0
         self.owed = 0
+        self.offline_source = "shared_device" if self.offline else "none"
 
     def store(self, rows: list) -> None:
         for source in rows:
@@ -155,8 +160,7 @@ class ConstrainedConservativeDoubleDQN:
     def learn(self, rows: list, day: int) -> None:
         """Accumulate source update credits, keeping the policy fixed between refits."""
         self.store(rows)
-        if rows:
-            self.owed += self.config.updates_per_epoch
+        self.owed += self.config.updates_per_epoch * len(rows)
         if len(self.buffer) < self.config.batch_size:
             return
         if day - self.refit_day < self.config.retrain_period_days:
@@ -230,6 +234,8 @@ class ConstrainedConservativeDoubleDQN:
             "rng": self.rng.bit_generator.state,
             "refit_day": self.refit_day,
             "owed": self.owed,
+            "replay_write": self.write,
+            "offline_source": self.offline_source,
         }
 
     def restore(self, checkpoint: dict) -> None:
@@ -262,6 +268,25 @@ class ConstrainedConservativeDoubleDQN:
         self.refit_day = checkpoint["refit_day"]
         self.owed = checkpoint["owed"]
         self.rng.bit_generator.state = checkpoint["rng"]
+        self.write = checkpoint.get("replay_write", 0)
+        if (
+            not isinstance(self.write, int)
+            or not 0 <= self.write < self.config.replay_capacity
+        ):
+            raise ValueError("Invalid replay position")
+        if checkpoint.get(
+            "offline_source", self.offline_source
+        ) != self.offline_source or checkpoint.get("participant_offline"):
+            raise ValueError("Incompatible offline replay source")
+
+    def restore_replay(self, rows: list) -> None:
+        """Rebuild the ring from the ledger's oldest-to-newest retained rows."""
+        rows = [validate_transition(row, self.width) for row in rows]
+        if len(rows) > self.config.replay_capacity:
+            raise ValueError("Replay exceeds configured capacity")
+        if self.write and len(rows) != self.config.replay_capacity:
+            raise ValueError("Checkpoint and replay ledger disagree")
+        self.buffer = rows[-self.write :] + rows[: -self.write] if self.write else rows
 
     @property
     def revision(self) -> str:

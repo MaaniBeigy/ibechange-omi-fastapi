@@ -1,0 +1,51 @@
+@startuml
+title One decision and delayed learning in OMI
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+hide footbox
+participant "Worker or plan API" as Caller
+participant "Plan service" as Plan
+participant "Learning service" as Learning
+participant "ConCDDQN" as RL
+database "PostgreSQL" as DB
+participant "Delivery / Artemis" as External
+
+Caller -> DB : acquire participant transaction lock
+Caller -> Plan : generate_recommendation_plan(epoch)
+Plan -> Learning : prepare_policy(observed_at)
+Learning -> DB : release closed, confirmed outcomes
+alt online learning
+  Learning -> DB : restore participant checkpoint and replay
+  Learning -> RL : load matching shared device replay
+  Learning -> RL : learn(all newly released rows, day)
+  note right of RL
+  At most one refit per local day.
+  Four update credits per released transition.
+  Batch = 8 shared offline + 24 personal online.
+  All current rows enter replay before fitting.
+  end note
+  RL --> Learning : weights, Adam state, RNG and replay position
+  Learning -> DB : save checkpoint and consumed rows
+else frozen artifact
+  Learning -> RL : use fixed artifact weights
+end
+Learning --> Plan : current policy
+Plan -> Plan : build observed state and safe action set
+Plan -> RL : decide_epoch(state, mask)
+RL --> Plan : wait/send, propensity, revision
+Plan -> DB : store PolicyDecision and next-state link
+opt action = send
+  Plan -> DB : store RecommendationPlan
+end
+Caller -> DB : commit transaction
+External -> Caller : retrieve committed plans
+Caller --> External : send times and content identities
+External -> DB : consumer commits sent/opened events
+note over Learning, DB
+At a later policy preparation, a confirmed send receives its reward
+after the 60-minute response window. Unconfirmed plans time out
+without an unopened-send penalty. Late outcomes do not rewrite
+an already released reward.
+end note
+@enduml
