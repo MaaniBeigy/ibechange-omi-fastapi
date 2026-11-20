@@ -7,16 +7,18 @@ from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
-from app.models.selected_content import SelectedContent
+from app.models.policy_learning import PolicyLearner, PolicyTransition
 from app.models.user import User
 from app.services.policy_learning_service import (
     close_episode,
     lock_user,
     prepare_policy,
 )
-from app.services.recommendation_plan_service import generate_recommendation_plan
-from app.services.rl_policy import load_policy_artifacts
-from app.utils.helpers import _aware_utc
+from app.services.recommendation_plan_service import (
+    current_queue,
+    generate_recommendation_plan,
+)
+from app.services.rl_policy import InfeasibleQueueError, load_policy_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 def run_epoch(engine, epoch: datetime) -> int:
     """Commit users independently so an infeasible queue cannot stop the cohort."""
     policies = load_policy_artifacts()
+    versions = [policy.version for policy in policies.values()]
     with Session(engine) as db:
         user_ids = db.exec(select(User.id).order_by(User.id)).all()
     completed = 0
@@ -31,23 +34,29 @@ def run_epoch(engine, epoch: datetime) -> int:
         with Session(engine) as db:
             try:
                 lock_user(db, user_id)
-                user = db.get(User, user_id)
-                selections = db.exec(
-                    select(SelectedContent).where(
-                        SelectedContent.user_id == user_id,
-                        SelectedContent.is_deleted == False,
+                # HTTP may already have prepared a later epoch while this worker
+                # was processing the rest of the cohort. Never move a stream back.
+                if db.exec(
+                    select(PolicyLearner.id)
+                    .where(
+                        PolicyLearner.user_id == user_id,
+                        PolicyLearner.updated_at > epoch,
+                        PolicyLearner.base_version.in_(versions),
                     )
-                ).all()
-                current = max(
-                    selections,
-                    key=lambda row: (
-                        _aware_utc(row.modified_at or row.created_at),
-                        str(row.id),
-                    ),
-                    default=None,
-                )
+                    .limit(1)
+                ).first():
+                    continue
+                user = db.get(User, user_id)
+                current = current_queue(db, user_id, epoch)
+                feasible = True
                 if current is not None and not user.is_deleted:
-                    generate_recommendation_plan(current, epoch, db)
+                    try:
+                        generate_recommendation_plan(current, epoch, db)
+                    except InfeasibleQueueError as error:
+                        feasible = False
+                        logger.warning(
+                            "Infeasible queue for %s at %s: %s", user_id, epoch, error
+                        )
                 close_episode(db, user_id, epoch)
                 wearer = (user.characteristics or {}).get("attributes", {}).get(
                     "wearable"
@@ -55,8 +64,18 @@ def run_epoch(engine, epoch: datetime) -> int:
                 prepare_policy(
                     db, user_id, policies["wearer" if wearer else "nonwearer"], epoch
                 )
+                previous_device = policies["nonwearer" if wearer else "wearer"]
+                if db.exec(
+                    select(PolicyTransition.id)
+                    .where(
+                        PolicyTransition.user_id == user_id,
+                        PolicyTransition.base_version == previous_device.version,
+                    )
+                    .limit(1)
+                ).first():
+                    prepare_policy(db, user_id, previous_device, epoch)
                 db.commit()
-                completed += 1
+                completed += int(feasible)
             except Exception:
                 db.rollback()
                 logger.exception(

@@ -115,7 +115,7 @@ services:
     env_file: [.env]
     volumes:
       - .:/app
-    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--out", "build/online"]
+    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--out", "build/online", "--checkpoint", "build/online/checkpoint.json"]
 
   learning-check-frozen:
     build:
@@ -125,7 +125,7 @@ services:
     env_file: [.env]
     volumes:
       - .:/app
-    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--mode", "frozen", "--out", "build/frozen"]
+    command: ["python", "-m", "scripts.check_policy_learning", "--days", "14", "--seed", "11", "--mode", "frozen", "--out", "build/frozen", "--checkpoint", "build/frozen/checkpoint.json"]
 
   export-artifacts:
     build:
@@ -135,7 +135,7 @@ services:
     volumes:
       - .:/app
       - ..:/research
-    command: ["python", "-m", "scripts.train_policy_artifacts", "--log", "/research/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz", "--run", "/research/notification-reward-engineering/data/learn/wearable_940/run.json", "--config", "configs/omi_concddqn.json", "--out", "build/policy_artifacts", "--limit", "20000", "--scan-limit", "5000000", "--steps", "2000", "--seed", "20261104"]
+    command: ["python", "-m", "scripts.train_policy_artifacts", "--log", "/research/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz", "--run", "/research/notification-reward-engineering/data/learn/wearable_940/run.json", "--config", "configs/omi_concddqn.json", "--out", "build/policy_artifacts", "--limit", "20000", "--scan-limit", "5000000", "--steps", "2000", "--seed", "20261104", "--checkpoint-dir", "build/pretraining-checkpoints"]
 
   metabase:
     image: metabase/metabase:latest

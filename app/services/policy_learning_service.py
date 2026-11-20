@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from app.models.event import Event
 from app.models.policy_decision import PolicyDecision
-from app.models.policy_learning import PolicyLearner, PolicyTransition
+from app.models.policy_learning import PolicyCheckpoint, PolicyLearner, PolicyTransition
 from app.rl.learner import ConstrainedConservativeDoubleDQN, TrainingConfig
 from app.services.rl_observations import _identity
 from app.services.rl_policy import PolicyArtifact
@@ -51,6 +51,7 @@ def record_next_state(db: Session, current: PolicyDecision) -> None:
         select(PolicyDecision)
         .where(
             PolicyDecision.user_id == current.user_id,
+            PolicyDecision.superseded_by == None,
             PolicyDecision.decided_at < current.decided_at,
         )
         .order_by(PolicyDecision.decided_at.desc())
@@ -99,6 +100,7 @@ def close_episode(db: Session, user_id, now: datetime) -> None:
         select(PolicyDecision)
         .where(
             PolicyDecision.user_id == user_id,
+            PolicyDecision.superseded_by == None,
             PolicyDecision.decided_at < now,
         )
         .order_by(PolicyDecision.decided_at.desc())
@@ -137,6 +139,10 @@ def _release(
     db: Session, transition: PolicyTransition, now: datetime, metadata: dict
 ) -> None:
     decision = db.get(PolicyDecision, transition.decision_id)
+    if now < _aware_utc(decision.decided_at) + timedelta(
+        minutes=transition.elapsed_min
+    ):
+        return
     engagement, miss = 0.0, 0.0
     if decision.action:
         sent = (
@@ -228,6 +234,79 @@ def _replay_row(transition: PolicyTransition) -> dict:
     }
 
 
+def _stream(user_id, artifact):
+    return select(PolicyTransition).where(
+        PolicyTransition.user_id == user_id,
+        PolicyTransition.device == artifact.metadata["device"],
+        PolicyTransition.base_version == artifact.version,
+    )
+
+
+def _stored_learner(db, user_id, artifact):
+    return db.exec(
+        select(PolicyLearner).where(
+            PolicyLearner.user_id == user_id,
+            PolicyLearner.device == artifact.metadata["device"],
+            PolicyLearner.base_version == artifact.version,
+        )
+    ).first()
+
+
+def _restore_ledger(db, user_id, artifact, learner):
+    cursor = learner.replay_count
+    rows = db.exec(
+        _stream(user_id, artifact)
+        .where(
+            PolicyTransition.replay_index
+            > max(0, cursor - learner.config.replay_capacity),
+            PolicyTransition.replay_index <= cursor,
+        )
+        .order_by(PolicyTransition.replay_index)
+    ).all()
+    learner.restore_replay([_replay_row(row) for row in rows])
+
+
+def restore_policy_at(db: Session, user_id, artifact: PolicyArtifact, at: datetime):
+    """Return an independent trainable learner as of the last committed change by at."""
+    at = _aware_utc(at)
+    lock_user(db, user_id)
+    stored = _stored_learner(db, user_id, artifact)
+    snapshot = (
+        db.exec(
+            select(PolicyCheckpoint)
+            .where(
+                PolicyCheckpoint.learner_id == stored.id,
+                PolicyCheckpoint.saved_at <= at,
+            )
+            .order_by(PolicyCheckpoint.saved_at.desc())
+        ).first()
+        if stored
+        else None
+    )
+    if snapshot is None:
+        raise ValueError("No participant checkpoint at or before the requested time")
+    learner = ConstrainedConservativeDoubleDQN(
+        artifact, seed=participant_seed(user_id, artifact)
+    )
+    learner.restore(snapshot.checkpoint)
+    _restore_ledger(db, user_id, artifact, learner)
+    # Between optimizer snapshots only the replay ring and its update credits change.
+    later = db.exec(
+        _stream(user_id, artifact)
+        .where(
+            PolicyTransition.replay_index > learner.replay_count,
+            PolicyTransition.consumed_at <= at,
+        )
+        .order_by(PolicyTransition.replay_index)
+    ).all()
+    for row in later:
+        if row.replay_index != learner.replay_count + 1:
+            raise ValueError("Gap in participant replay ledger")
+        learner.store([_replay_row(row)])
+    learner.owed += len(later) * learner.config.updates_per_epoch
+    return learner
+
+
 def prepare_policy(
     db: Session, user_id, artifact: PolicyArtifact, epoch: datetime
 ) -> PolicyArtifact:
@@ -235,14 +314,14 @@ def prepare_policy(
     mode = learning_mode()
     lock_user(db, user_id)
     epoch = _aware_utc(epoch)
+    stored = _stored_learner(db, user_id, artifact) if mode == "online" else None
+    if stored and epoch < _aware_utc(stored.updated_at):
+        raise ValueError("Policy time precedes the current checkpoint")
+    stream = _stream(user_id, artifact)
     pending = db.exec(
-        select(PolicyTransition)
-        .where(
-            PolicyTransition.user_id == user_id,
-            PolicyTransition.base_version == artifact.version,
-            PolicyTransition.status == "pending",
+        stream.where(PolicyTransition.status == "pending").order_by(
+            PolicyTransition.created_at, PolicyTransition.id
         )
-        .order_by(PolicyTransition.created_at, PolicyTransition.id)
     ).all()
     for row in pending:
         _release(db, row, epoch, artifact.metadata)
@@ -257,13 +336,6 @@ def prepare_policy(
     learner = ConstrainedConservativeDoubleDQN(
         artifact, seed=participant_seed(user_id, artifact)
     )
-    stored = db.exec(
-        select(PolicyLearner).where(
-            PolicyLearner.user_id == user_id,
-            PolicyLearner.device == artifact.metadata["device"],
-            PolicyLearner.base_version == artifact.version,
-        )
-    ).first()
     if stored is None:
         stored = PolicyLearner(
             user_id=user_id,
@@ -272,46 +344,45 @@ def prepare_policy(
             checkpoint=learner.checkpoint(),
             started_at=epoch,
             updated_at=epoch,
+            policy_timezone=os.getenv("POLICY_TIMEZONE", "Europe/Berlin"),
         )
         db.add(stored)
         db.flush()
+        db.add(
+            PolicyCheckpoint(
+                learner_id=stored.id, saved_at=epoch, checkpoint=stored.checkpoint
+            )
+        )
     else:
         learner.restore(stored.checkpoint)
-    # Durable replay ledger holds all rewards; only the latest capacity is sampled.
-    old = db.exec(
-        select(PolicyTransition)
-        .where(
-            PolicyTransition.user_id == user_id,
-            PolicyTransition.base_version == artifact.version,
-            PolicyTransition.consumed_at != None,
-        )
-        .order_by(
-            PolicyTransition.consumed_at.desc(),
-            PolicyTransition.released_at.desc(),
-            PolicyTransition.id.desc(),
-        )
-        .limit(learner.config.replay_capacity)
-    ).all()
-    learner.restore_replay([_replay_row(row) for row in reversed(old)])
     fresh = db.exec(
-        select(PolicyTransition)
-        .where(
-            PolicyTransition.user_id == user_id,
-            PolicyTransition.base_version == artifact.version,
+        stream.where(
             PolicyTransition.status == "released",
+            PolicyTransition.released_at <= epoch,
             PolicyTransition.consumed_at == None,
-        )
-        .order_by(PolicyTransition.released_at, PolicyTransition.id)
+        ).order_by(PolicyTransition.released_at, PolicyTransition.id)
     ).all()
-    zone = ZoneInfo(os.getenv("POLICY_TIMEZONE", "Europe/Berlin"))
+    zone = ZoneInfo(stored.policy_timezone)
     day = (
         epoch.astimezone(zone).date()
         - _aware_utc(stored.started_at).astimezone(zone).date()
     ).days
-    learner.learn([_replay_row(row) for row in fresh], day)
-    for row in fresh:
+    previous_refit = learner.refit_day
+    cursor = learner.replay_count
+    if fresh or learner.refit_due(learner.replay_count, day):
+        _restore_ledger(db, user_id, artifact, learner)
+        learner.learn([_replay_row(row) for row in fresh], day)
+    for index, row in enumerate(fresh, cursor + 1):
+        row.replay_index = index
         row.consumed_at = epoch
-    stored.checkpoint = learner.checkpoint()
+    if fresh or learner.refit_day != previous_refit:
+        stored.checkpoint = learner.checkpoint()
+    if learner.refit_day != previous_refit:
+        db.merge(
+            PolicyCheckpoint(
+                learner_id=stored.id, saved_at=epoch, checkpoint=stored.checkpoint
+            )
+        )
     stored.updated_at = epoch
     metadata = dict(
         artifact.metadata, learner_revision=learner.revision, learning_day=day

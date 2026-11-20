@@ -99,6 +99,7 @@ class ArtemisProducer:
         destination: str,
         message: Dict[str, Any],
         persistent: bool = True,
+        duplicate_id: str | None = None,
     ) -> str:
         """Send a message to Artemis queue."""
         if self._connection is None or not self._connection.is_connected():
@@ -113,6 +114,8 @@ class ArtemisProducer:
             "destination": destination,
         }
 
+        if duplicate_id:
+            headers["_AMQ_DUPL_ID"] = duplicate_id
         try:
             self._connection.send(
                 body=body,

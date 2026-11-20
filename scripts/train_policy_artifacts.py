@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.rl.checkpoint import save_checkpoint
 from app.rl.learner import ConstrainedConservativeDoubleDQN, TrainingConfig
 from app.rl.network import Network
 from app.rl.replay import write_replay
@@ -227,9 +228,11 @@ def export(
     steps: int,
     seed: int,
     configuration: Path | None = None,
+    checkpoint_dir: Path | None = None,
+    checkpoint_steps: int = 100,
 ) -> None:
     """Fit the source agent and write versioned NumPy weight files."""
-    if min(limit, steps) < 1 or scan_limit < 0:
+    if min(limit, steps, checkpoint_steps) < 1 or scan_limit < 0:
         raise ValueError(
             "Training limits and steps must be positive; scan limit may be zero"
         )
@@ -328,7 +331,26 @@ def export(
         initial = PolicyArtifact(metadata, network.weights, network.biases)
         agent = ConstrainedConservativeDoubleDQN(initial, seed=seed, offline=rows)
         agent.rng = np.random.default_rng(seed)
-        agent.pretrain(steps)
+        if checkpoint_dir is None:
+            agent.pretrain(steps)
+        else:
+            path = checkpoint_dir / f"{device}.json"
+            if path.exists():
+                saved = json.loads(path.read_text(encoding="utf-8"))
+                if saved["skip_prior"] != values["agent.skip_prior"]:
+                    raise ValueError("Pretraining skip prior differs from checkpoint")
+                agent.restore(saved["checkpoint"])
+                if agent.online.updates > steps:
+                    raise ValueError("Checkpoint exceeds requested pretraining steps")
+            while agent.online.updates < steps:
+                agent.pretrain(min(checkpoint_steps, steps - agent.online.updates))
+                save_checkpoint(
+                    path,
+                    dict(
+                        checkpoint=agent.checkpoint(),
+                        skip_prior=values["agent.skip_prior"],
+                    ),
+                )
         # The source calls prefer_skip again after its offline phase.
         agent.online.bias_out[0] += values["agent.skip_prior"]
         weights = {
@@ -374,6 +396,10 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--config", type=Path)
+    parser.add_argument(
+        "--checkpoint-dir", type=Path, help="Save and resume the two offline optimizers"
+    )
+    parser.add_argument("--checkpoint-steps", type=int, default=100)
     args = parser.parse_args()
     export(
         args.log,
@@ -384,6 +410,8 @@ def main() -> None:
         args.steps,
         args.seed,
         args.config,
+        args.checkpoint_dir,
+        args.checkpoint_steps,
     )
 
 

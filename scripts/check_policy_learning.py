@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.rl.checkpoint import save_checkpoint
 from app.rl.learner import ConstrainedConservativeDoubleDQN
 from app.services.rl_policy import (
     PolicyArtifact,
@@ -21,11 +22,17 @@ def parameter_digest(model) -> str:
     return hashlib.sha256(b"".join(p.tobytes() for p in model.parameters())).hexdigest()
 
 
-def run_check(days: int = 14, seed: int = 11, mode: str = "online") -> tuple:
+def run_check(
+    days: int = 14,
+    seed: int = 11,
+    mode: str = "online",
+    checkpoint_path: Path | None = None,
+    device: str = "nonwearer",
+) -> tuple:
     """Exercise actual policy and gradient updates with explicitly artificial responses."""
     if days < 1 or mode not in {"online", "frozen"}:
         raise ValueError("Use positive days and online or frozen mode")
-    artifact = load_policy_artifacts()["nonwearer"]
+    artifact = load_policy_artifacts()[device]
     learner = ConstrainedConservativeDoubleDQN(artifact, seed=seed)
     before = parameter_digest(learner.online)
     rng = np.random.default_rng(seed)
@@ -34,6 +41,22 @@ def run_check(days: int = 14, seed: int = 11, mode: str = "online") -> tuple:
     window = float(config["response_window_min"])
     history, pending, daily = [], [], []
     last_send, sent_week, ema, violations = -10080, 0, 0.0, 0
+
+    if checkpoint_path and checkpoint_path.exists():
+        saved = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        if saved["seed"] != seed or saved["mode"] != mode:
+            raise ValueError("Learning check seed or mode differs from checkpoint")
+        learner.restore_portable(saved["learner"])
+        rng.bit_generator.state = saved["rng"]
+        daily, pending, history = saved["daily"], saved["pending"], saved["history"]
+        last_send, sent_week, ema, violations = (
+            saved["last_send"],
+            saved["sent_week"],
+            saved["ema"],
+            saved["violations"],
+        )
+        if len(daily) > days:
+            raise ValueError("Requested end precedes the saved day")
 
     def release(now, day):
         nonlocal pending, ema
@@ -48,7 +71,7 @@ def run_check(days: int = 14, seed: int = 11, mode: str = "online") -> tuple:
             p for p in pending if not (p["ready"] <= now and p["row"] is not None)
         ]
 
-    for day in range(days):
+    for day in range(len(daily), days):
         if day % 7 == 0:
             sent_week = 0
         items = (
@@ -85,6 +108,7 @@ def run_check(days: int = 14, seed: int = 11, mode: str = "online") -> tuple:
                     (item.deadline_minute for item in items if item.kind == "reminder"),
                     None,
                 ),
+                wearable={} if device == "wearer" else None,
                 floor_day=4,
                 floor_week=0,
                 exploration_seed=int(rng.integers(2**63)),
@@ -176,6 +200,23 @@ def run_check(days: int = 14, seed: int = 11, mode: str = "online") -> tuple:
                 policy_revision=learner.revision,
             )
         )
+        if checkpoint_path:
+            save_checkpoint(
+                checkpoint_path,
+                dict(
+                    mode=mode,
+                    seed=seed,
+                    daily=daily,
+                    pending=pending,
+                    history=history,
+                    learner=learner.portable_checkpoint(),
+                    rng=rng.bit_generator.state,
+                    last_send=last_send,
+                    sent_week=sent_week,
+                    ema=ema,
+                    violations=violations,
+                ),
+            )
     summary = dict(
         purpose="Software learning check with artificial response probabilities; no pilot calibration",
         mode=mode,
@@ -199,8 +240,18 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--mode", choices=("online", "frozen"), default="online")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        help="Save after each day and resume if this file exists",
+    )
+    parser.add_argument(
+        "--device", choices=("wearer", "nonwearer"), default="nonwearer"
+    )
     args = parser.parse_args()
-    daily, summary = run_check(args.days, args.seed, args.mode)
+    daily, summary = run_check(
+        args.days, args.seed, args.mode, args.checkpoint, args.device
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / "daily.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(daily[0]))

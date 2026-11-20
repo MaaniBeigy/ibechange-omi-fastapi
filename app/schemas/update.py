@@ -2,7 +2,14 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.artemis_producer import ArtemisNotificationPlan
 
@@ -67,7 +74,7 @@ class ArtemisNewPillar(ArtemisPayload):
 
 class ArtemisMissionSelected(ArtemisPayload):
     user_uuid: UUID
-    mission: str
+    mission: str = Field(validation_alias=AliasChoices("mission", "mission_id"))
     created_at: datetime
     process_id: int
     mission_process_id: int
@@ -94,8 +101,8 @@ class ArtemisTaskScheduledProperties(ArtemisPayload):
 
     @model_validator(mode="after")
     def check_step_count(self):
-        """Require one interval for every reported task step."""
-        if self.total_steps < 1 or len(self.scheduled_for) != self.total_steps:
+        """A snapshot can contain a subset of the mission's total steps."""
+        if self.total_steps < 1 or not 0 < len(self.scheduled_for) <= self.total_steps:
             raise ValueError("Scheduled task step count is inconsistent")
         return self
 
@@ -109,7 +116,7 @@ class ArtemisTaskStepScheduled(ArtemisPayload):
 
 
 class ArtemisTaskDoneProperties(ArtemisPayload):
-    mission: str
+    mission: str = Field(validation_alias=AliasChoices("mission", "mission_id"))
     total_steps: int
     finished_at: datetime
 
@@ -123,6 +130,7 @@ class ArtemisTaskStepDone(ArtemisPayload):
 
 
 class ArtemisMissionAccomplished(ArtemisPayload):
+    end_reason: str | None = None
     user_uuid: UUID
     mission_id: str
     created_at: datetime
@@ -161,6 +169,12 @@ ARTEMIS_MESSAGES = {
     "task_step_scheduled": ArtemisTaskStepScheduled,
     "task_step_done": ArtemisTaskStepDone,
     "mission_accomplished": ArtemisMissionAccomplished,
+    "mission_changed": ArtemisMissionAccomplished,
+    "mission_not_achieved": ArtemisMissionAccomplished,
+    "notification_rated": ArtemisNotification,
+    "notification_saved": ArtemisNotification,
+    "notification_unsaved": ArtemisNotification,
+    "resource_link_opened": ArtemisNotification,
     "notification_sent": ArtemisNotification,
     "notification_opened": ArtemisNotification,
     "notification_plan": ArtemisNotificationPlan,

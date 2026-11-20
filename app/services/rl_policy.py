@@ -68,11 +68,20 @@ def state_fields(wearer: bool) -> tuple[str, ...]:
     )
 
 
+def feedback_type(content_type):
+    """Artemis may report either reminder subtype as reminder."""
+    return (
+        "reminder"
+        if content_type in {"hour_reminder", "day_reminder"}
+        else content_type
+    )
+
+
 def policy_kind(content_type: str) -> str:
     """Map stored content types to the two policy item classes."""
     if content_type in {"recommendation", "resource"}:
         return "recommendation"
-    if content_type == "reminder":
+    if content_type in {"reminder", "hour_reminder", "day_reminder"}:
         return "reminder"
     raise ValueError(f"Unsupported content type: {content_type}")
 
@@ -149,6 +158,7 @@ class QueueItem:
 
     content_type: str
     deadline_minute: int
+    earliest_minute: int = 0
 
     @property
     def kind(self) -> str:
@@ -162,6 +172,32 @@ def _awake(minute: int, quiet_start: int, quiet_end: int) -> bool:
     if quiet_start > quiet_end:
         return quiet_end <= hour < quiet_start
     return hour < quiet_start or hour >= quiet_end
+
+
+def reminder_windows(
+    items: tuple[QueueItem, ...],
+    grid: int,
+    blackout: float,
+    quiet_start: int,
+    quiet_end: int,
+) -> tuple[QueueItem, ...]:
+    """Relax the preferred hour window just enough to leave room for later items."""
+    latest = 1439
+    spacing = max(1, math.ceil(blackout / grid)) * grid
+    result = []
+    for item in reversed(items):
+        latest = min(latest, item.deadline_minute) // grid * grid
+        while latest >= 0 and not _awake(latest, quiet_start, quiet_end):
+            latest -= grid
+        if item.content_type == "hour_reminder":
+            item = QueueItem(
+                item.content_type,
+                item.deadline_minute,
+                max(0, min(item.earliest_minute, latest)),
+            )
+        result.append(item)
+        latest -= spacing
+    return tuple(reversed(result))
 
 
 def _can_finish(
@@ -181,7 +217,9 @@ def _can_finish(
 ) -> bool:
     """Check whether earliest allowed placement completes the ordered queue."""
     for item in items:
-        while minute < 1440 and not _awake(minute, quiet_start, quiet_end):
+        while minute < 1440 and (
+            minute < item.earliest_minute or not _awake(minute, quiet_start, quiet_end)
+        ):
             minute += grid
         if minute >= 1440 or minute > item.deadline_minute:
             return False
@@ -215,11 +253,13 @@ def safe_actions(
     """Return safe skip and send actions for the head of the queue."""
     if not items:
         return True, False
+    if any(item.content_type == "hour_reminder" for item in items):
+        items = reminder_windows(items, grid, blackout, quiet_start, quiet_end)
     spacing = grid * max(math.ceil(blackout / grid), 1)
     can_send = (
         since_last >= blackout
         and _awake(minute, quiet_start, quiet_end)
-        and minute <= items[0].deadline_minute
+        and items[0].earliest_minute <= minute <= items[0].deadline_minute
         and sent_day < cap_day
         and sent_week < cap_week
     )

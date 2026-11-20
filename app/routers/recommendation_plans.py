@@ -5,7 +5,6 @@ from typing import Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
@@ -21,8 +20,11 @@ from app.schemas.recommendation_plan import (
     RecommendationPlanList,
     RecommendationPlanResponse,
 )
-from app.services.policy_learning_service import close_episode
-from app.services.recommendation_plan_service import generate_recommendation_plan
+from app.services.policy_learning_service import close_episode, lock_user
+from app.services.recommendation_plan_service import (
+    current_queue,
+    generate_recommendation_plan,
+)
 from app.services.rl_policy import InfeasibleQueueError, load_policy_artifacts
 from app.utils.helpers import _aware_utc, _iso_to_utc_aware
 
@@ -57,49 +59,25 @@ def _next_epoch(now: datetime) -> datetime:
     return now if remainder == 0 else now + timedelta(seconds=grid_seconds - remainder)
 
 
-def _latest_selections(db: Session) -> list[SelectedContent]:
-    """Return the current ordered queue for every eligible user."""
-    rows = db.exec(
-        select(SelectedContent)
+def _eligible_users(db: Session) -> list[UUID]:
+    return db.exec(
+        select(SelectedContent.user_id)
         .join(User, User.id == SelectedContent.user_id)
         .where(SelectedContent.is_deleted == False, User.is_deleted == False)
+        .distinct()
+        .order_by(SelectedContent.user_id)
     ).all()
-    latest: dict[UUID, SelectedContent] = {}
-    for row in rows:
-        current = latest.get(row.user_id)
-        if current is None or _aware_utc(
-            row.modified_at or row.created_at
-        ) > _aware_utc(current.modified_at or current.created_at):
-            latest[row.user_id] = row
-    return list(latest.values())
 
 
 def _decide_current_epoch(db: Session, epoch: datetime) -> None:
-    """Commit at most one policy action per current queue and user."""
-    for selected in _latest_selections(db):
+    """Read the eligible participant's day and revision after acquiring their lock."""
+    for user_id in _eligible_users(db):
         try:
-            db.execute(
-                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
-                {"key": str(selected.user_id)},
-            )
-            current = db.exec(
-                select(SelectedContent)
-                .where(
-                    SelectedContent.user_id == selected.user_id,
-                    SelectedContent.is_deleted == False,
-                )
-                .order_by(
-                    func.coalesce(
-                        SelectedContent.modified_at, SelectedContent.created_at
-                    ).desc(),
-                    SelectedContent.id.desc(),
-                )
-                .limit(1)
-                .execution_options(populate_existing=True)
-                .with_for_update()
-            ).one()
-            generate_recommendation_plan(current, epoch, db)
-            close_episode(db, selected.user_id, epoch)
+            lock_user(db, user_id)
+            current = current_queue(db, user_id, epoch)
+            if current:
+                generate_recommendation_plan(current, epoch, db)
+            close_episode(db, user_id, epoch)
             db.commit()
         except InfeasibleQueueError as error:
             db.rollback()
@@ -144,7 +122,13 @@ def _read_plans(db: Session, start: datetime, end: datetime) -> RecommendationPl
                 content_id=recommendation.content_id,
                 content_type=content_type,
                 scheduled_for=_aware_utc(plan.scheduled_for),
-                plan_id=plan.plan_id,
+                plan_id=selected.source_plan_id or plan.plan_id,
+                created_at=_aware_utc(
+                    selected.source_created_at or selected.created_at
+                ),
+                push_text_id=(
+                    selected_item.get("push_text_id") if selected_item else None
+                ),
                 mission_id=mission_code or "UNKNOWN",
                 mission_start_time=(
                     _aware_utc(selected.mission_start_time)
@@ -202,10 +186,13 @@ def get_notification_plans(
                 raise HTTPException(status_code=500, detail="Missing content_type")
             items.append(
                 NotificationItem(
+                    plan_id=plan.plan_id,
                     id=plan.content_id,
                     send_timestamp=plan.scheduled_for.replace(tzinfo=None),
                     type=plan.content_type,
                     mission=plan.mission_id,
+                    mission_process_id=plan.mission_process_id,
+                    push_text_id=plan.push_text_id,
                     selection_timestamp=(
                         plan.mission_start_time.replace(tzinfo=None)
                         if plan.mission_start_time
@@ -213,5 +200,10 @@ def get_notification_plans(
                     ),
                 )
             )
-        output[bucket.user_id] = NotificationUserBucket(contents=items)
+        output[bucket.user_id] = NotificationUserBucket(
+            contents=items,
+            created_at=max(
+                (p.created_at for p in bucket.plans if p.created_at), default=None
+            ),
+        )
     return output

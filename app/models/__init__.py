@@ -12,7 +12,7 @@ from .mission import Mission
 from .model import Model
 from .persona import Persona
 from .policy_decision import PolicyDecision
-from .policy_learning import PolicyLearner, PolicyTransition
+from .policy_learning import PolicyCheckpoint, PolicyLearner, PolicyTransition
 from .recommendation import Recommendation
 from .recommendation_plan import RecommendationPlan
 from .selected_content import SelectedContent

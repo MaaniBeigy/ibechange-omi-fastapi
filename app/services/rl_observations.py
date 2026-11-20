@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
 
 from app.models.event import Event
+from app.services.rl_policy import feedback_type
 from app.utils.helpers import _aware_utc, _to_naive_utc
 
 
@@ -31,7 +32,7 @@ def _identity(event: Event) -> tuple:
         properties.get("mission_process_id"),
         properties.get("content_id"),
         properties.get("mission_id"),
-        properties.get("content_type"),
+        feedback_type(properties.get("content_type")),
     )
 
 
@@ -50,7 +51,7 @@ def observed_history(
             Event.is_deleted == False,
             Event.is_virtual == False,
         )
-        .order_by(Event.event_start_time)
+        .order_by(Event.event_start_time, Event.id)
     ).all()
     sends = [row for row in rows if row.event_name == "notification_sent"]
     opens = [row for row in rows if row.event_name == "notification_opened"]
@@ -109,7 +110,7 @@ def observed_history(
         for row in today_sends
     )
     sent_reminders = sum(
-        (row.characteristics or {}).get("content_type") == "reminder"
+        feedback_type((row.characteristics or {}).get("content_type")) == "reminder"
         for row in today_sends
     )
     sent_week = sum(

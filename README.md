@@ -56,7 +56,7 @@ confirmations later release the delayed reward.
 *Learning classes.* The serving policy (PolicyArtifact) and the learner
 (ConstrainedConservativeDoubleDQN with Network and TrainingConfig) with typed
 attributes and methods, plus the PostgreSQL tables (PolicyDecision,
-PolicyTransition, PolicyLearner) that persist decisions, the replay ledger and
+PolicyTransition, PolicyLearner and PolicyCheckpoint) that persist decisions, the replay ledger and
 per-user optimizer checkpoints.
 
 [Class source](docs/diagrams/omi-learning-classes.puml)
@@ -142,35 +142,19 @@ an alternative artifact directory. Restart the processes after changing artifact
 ```bash
 curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: application/json" -d '{
   "474dbf4c-8922-4dac-aa35-92632a7bcaf8": {
+    "plan_id": "1842.0",
+    "created_at": "2026-11-05T01:05:12",
+    "delivery_date": "2026-11-05",
+    "mission_id": "PM3",
+    "mission_process_id": 864536,
+    "mission_start_time": "2026-11-03T08:12:40",
+    "mission_end_time": null,
+    "task_scheduled_for": "2026-11-05T18:00:00",
     "contents": [
-      { "id": "NRs6", "type": "resource", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc20", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" }
-    ],
-    "mission_start_time": "2025-12-01T10:00:33.919000",
-    "mission_end_time": "2025-12-31T10:00:33.919000",
-    "plan_id": "7b8a9f54-801a-4ab0-afe0-06f100441793"
-  },
-  "10b58b39-9a4c-46ad-b98d-03dc28735e6b": {
-    "contents": [
-      { "id": "NRc30", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc54", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc19", "type": "recommendation", "mission_id": "NM31" },
-      { "id": "NRc53", "type": "recommendation", "mission_id": "NM31" }
-    ],
-    "mission_start_time": "2025-12-01T10:00:33.919000",
-    "mission_end_time": "2025-12-31T10:00:33.919000",
-    "plan_id": "3b8a9f54-701a-1ab0-afe0-05f100441796"
+      {"id": "PRc12", "type": "recommendation", "latest_time": null},
+      {"id": "PRh1", "type": "hour_reminder", "latest_time": null},
+      {"id": "PRd5", "type": "day_reminder", "latest_time": "2026-11-05T19:00:00"}
+    ]
   }
 }'
 ```
@@ -178,6 +162,21 @@ curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: applic
 ```bash
 curl "http://localhost:3200/selected_contents/"
 ```
+
+CS sends one ordered revision per participant and local delivery date. A later
+`created_at` and new `plan_id` replace outstanding entries for that date. An
+empty list cancels them. Confirmed sends retain their decisions and outcomes.
+A revision received before a committed grid slot can replace that slot. OMI retains the superseded proposal and links the preceding transition to the replacement decision.
+OMI interprets offset-free daily CS timestamps in `POLICY_TIMEZONE`. Supply an
+explicit offset during a daylight-saving clock change. The API also accepts the
+earlier UUID-based queues with per-item mission IDs.
+
+The task time and each item's `latest_time` are exclusive cutoffs. Both reminder
+types use the reminder policy class. The hour reminder prefers the final hour
+before the task. If a subsequent item needs that slot, OMI moves the hour
+reminder to the latest earlier slot that satisfies order, spacing and deadlines.
+In the example above, 16:45 and 17:45 are the latest feasible reminder slots
+under the 15-minute grid and 60-minute spacing.
 
 ### Recommendation Plan
 
@@ -190,6 +189,16 @@ curl "http://localhost:3200/recommendation_plans/?start_time=2025-12-03T17:00:00
 ```bash
 curl "http://localhost:3200/notification_plans/?start_time=2025-12-03T17:00:00&end_time=2025-12-07T21:00:00"
 ```
+
+For orchestrated delivery, refresh CS selections hourly and poll OMI at least
+once per decision grid, ahead of the desired send. The worker commits one epoch
+at a time. The reference integration supports `--dag_id 2` to refresh and
+deliver, and `--dag_id 3 --delivery-only` to deliver between refreshes. With `--delivery vu`, it posts committed
+plans to CS and notifications to VU. With `--delivery artemis`, it publishes a
+proposal per send with a stable broker duplicate-detection ID. Configure
+`CS_BASE_URL`, `OMI_BASE_URL` and the selected delivery destination. Cancelling
+a revision updates OMI's retrieval endpoints. A recipient that has already
+copied a proposal needs to reconcile it before dispatch.
 
 ### Artemis updates
 
@@ -208,11 +217,12 @@ Each message has one top-level event key. For example:
 {"new_pillar": {"user_uuid": "3a6f5cbc-3e91-4a7a-8b41-7ce6bbd3372f", "pillars": "NO"}}
 ```
 
-The consumer accepts the twelve captured event types in `app/schemas/update.py`, including
-`task_step_scheduled`, `task_step_done`, and `mission_accomplished`, plus
-`notification_plan` proposals. Proposals are retained without counting them as
-confirmed deliveries. A scheduled
-task message gives one `scheduled_for` interval per reported step. OMI records
+The consumer accepts the captured Artemis events, the revised mission and task
+field names, mission changes and unsuccessful endings, notification ratings,
+saves and unsaves, and resource-link openings. It stores push-text IDs and
+routes with the source event. The existing reward uses confirmed sends and
+matched opens. A `notification_plan` is recorded as a proposal. The scheduler
+accepts a snapshot containing up to the mission's total step count. OMI records
 the original `startDate` and `endDate` strings and updates the active intervals
 for that mission process when Artemis sends a later schedule. Completion events
 retain their process IDs and source times. Psychological assessment messages in
@@ -275,6 +285,50 @@ serve a previously fitted participant checkpoint in frozen mode.
 The local runtime's source license and hashes are
 in [app/rl/NOTICE.md](app/rl/NOTICE.md).
 
+### Resume a participant at a time checkpoint
+
+With `POLICY_LEARNING_MODE=online`, restarting the API or worker against the
+same PostgreSQL database automatically continues from the latest committed
+checkpoint. Decisions, pending feedback and consumed replay rows persist across
+restarts. Keep the matching model, configuration and shared replay archive.
+
+For an independent continuation at an earlier instant, export the learner on
+a machine with the same database settings and artifact directory. Supply the
+participant UUID, device and an offset-qualified time.
+
+```bash
+python -m scripts.export_policy_checkpoint --user 474dbf4c-8922-4dac-aa35-92632a7bcaf8 --device nonwearer --at 2026-11-18T14:30:00+01:00 --out build/participant.json
+```
+
+The export includes the participant's start time, policy time zone, both networks,
+Adam state, sampling generator, refit day, update credits and retained replay.
+To continue the exported learner in a separate process:
+
+```python
+import json
+from pathlib import Path
+from app.rl.learner import ConstrainedConservativeDoubleDQN
+from app.services.rl_policy import load_policy_artifacts
+
+saved = json.loads(Path("build/participant.json").read_text(encoding="utf-8"))
+learner = ConstrainedConservativeDoubleDQN(load_policy_artifacts()[saved["device"]])
+learner.restore_portable(saved)
+# learner.learn(released_rows, day) uses local calendar days since saved["started_at"].
+```
+
+The live worker owns the production timeline. The export reads its ledger and
+can be used to fit a separate copy. Migration `20261120_07` preserves each
+existing learner's latest checkpoint as its earliest historical restore point.
+The earlier schema overwrote preceding optimizer states.
+
+For offline pretraining, add `--checkpoint-dir build/pretraining-checkpoints` to
+the exporter command. It resumes each device optimizer after reselecting and
+verifying the same training sample. Repeat the original command with the same
+target step count, source data, configuration and seed. The synthetic learning
+check accepts `--checkpoint build/check-day.json` and `--device wearer` or
+`nonwearer`. Its `--days` value is the total run length. The Compose tools use
+separate checkpoint paths for pretraining, online verification and frozen verification.
+
 Online action selection uses epsilon-greedy exploration within the safe action
 set, decreasing from 0.05 to 0.01 over 90 days. Each decision records its exact
 action probability; a forced action has probability one. The greedy rule sends
@@ -323,7 +377,7 @@ historical decisions. The delivery integration must retrieve and deliver the
 committed plans; the mask guarantees feasible planning while actual delivery
 requires that integration and later broker confirmations.
 An unresolved reminder has no safe send action. The plan endpoint reports that
-queue as infeasible. For each reminder, OMI matches active Artemis
+queue as infeasible. For legacy queues, OMI matches active Artemis
 `task_step_scheduled` intervals by user UUID and mission ID. It uses the latest
 `endDate` **on the local decision day** as that day's hard deadline. A later
 Artemis schedule snapshot replaces the previous intervals for that mission

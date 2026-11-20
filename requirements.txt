@@ -12,3 +12,4 @@ passlib[bcrypt]
 stomp.py==9.0.0
 alembic==1.20.0
 numpy==2.5.3
+requests

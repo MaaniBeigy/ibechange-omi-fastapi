@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class MissionCreate(BaseModel):
@@ -10,3 +10,8 @@ class MissionCreate(BaseModel):
 
 class MissionList(BaseModel):
     missions: List[MissionCreate]
+
+    @model_validator(mode="before")
+    @classmethod
+    def from_vu(cls, data):
+        return {"missions": data} if isinstance(data, list) else data

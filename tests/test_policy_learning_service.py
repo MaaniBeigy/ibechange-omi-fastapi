@@ -376,6 +376,7 @@ def test_learning_migration_upgrade_downgrade_and_existing_rows(
     spec.loader.exec_module(migration)
     with learning_database.begin() as connection:
         migration.op = Operations(MigrationContext.configure(connection))
+        connection.execute(text('DROP TABLE "PolicyCheckpoint"'))
         migration.downgrade()
         assert "PolicyLearner" not in inspect(connection).get_table_names()
         migration.upgrade()

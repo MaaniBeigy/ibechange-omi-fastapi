@@ -212,7 +212,7 @@ def test_schedule_interval_validation_and_replacement(database):
         },
     }
     bad = json.loads(json.dumps(scheduled))
-    bad["properties"]["total_steps"] = 3
+    bad["properties"]["total_steps"] = 1
     with pytest.raises(ValidationError):
         parse_artemis_message({"task_step_scheduled": bad})
     bad["properties"]["total_steps"] = 2

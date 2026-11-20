@@ -1,9 +1,8 @@
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import date, datetime, timezone
+from typing import List, Optional
 
-from sqlalchemy import ForeignKey
-from sqlmodel import ARRAY, JSON, Field, SQLModel, String
+from sqlmodel import JSON, Field, SQLModel
 
 
 class SelectedContent(SQLModel, table=True):
@@ -11,6 +10,12 @@ class SelectedContent(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(index=True, foreign_key="User.id")
+    source_plan_id: Optional[str] = None
+    source_created_at: Optional[datetime] = None
+    delivery_date: Optional[date] = Field(default=None, index=True)
+    task_scheduled_for: Optional[datetime] = None
+    mission_id: Optional[str] = None
+    mission_process_id: Optional[int] = None
     contents: List[dict] = Field(default_factory=list, sa_type=JSON)
     mission_start_time: Optional[datetime] = Field(default=None)
     mission_end_time: Optional[datetime] = Field(default=None)

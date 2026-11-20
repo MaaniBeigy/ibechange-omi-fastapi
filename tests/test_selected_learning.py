@@ -283,3 +283,19 @@ def test_learning_check_records_real_updates_and_fixed_weights_in_frozen_mode():
     assert all(row["sends"] == 4 for row in daily + frozen_daily)
     with pytest.raises(ValueError):
         run_check(days=0)
+
+
+@pytest.mark.parametrize(
+    "device,mode", [("nonwearer", "online"), ("wearer", "online"), ("wearer", "frozen")]
+)
+def test_learning_check_resumes_at_day_boundary(tmp_path, device, mode):
+    from scripts.check_policy_learning import run_check
+
+    path = tmp_path / "training.json"
+    run_check(2, 11, mode, path, device)
+    resumed = run_check(3, 11, mode, path, device)
+    assert resumed == run_check(3, 11, mode, device=device)
+    with pytest.raises(ValueError, match="precedes"):
+        run_check(1, 11, mode, path, device)
+    with pytest.raises(ValueError, match="seed"):
+        run_check(3, 32, mode, path, device)

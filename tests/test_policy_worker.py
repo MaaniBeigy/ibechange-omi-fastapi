@@ -155,3 +155,28 @@ def test_bootstrap_creates_baseline_before_migration(monkeypatch):
     )
     bootstrap.main()
     assert steps == ["baseline", "head"]
+
+
+def test_worker_finishes_old_device_feedback_without_rewinding(
+    learning_database, monkeypatch
+):
+    from app.models.policy_learning import PolicyLearner, PolicyTransition
+    from app.services.rl_policy import load_policy_artifacts
+    from tests.test_policy_learning_service import add_decision, add_user
+
+    monkeypatch.setenv("POLICY_LEARNING_MODE", "online")
+    policy = load_policy_artifacts()["nonwearer"]
+    with Session(learning_database) as db:
+        user, selected = add_user(db)
+        add_decision(db, user, selected, policy, NOW)
+        user.characteristics = {"attributes": {"wearable": "yes"}}
+        db.commit()
+    assert policy_worker.run_epoch(learning_database, NOW + timedelta(minutes=15)) == 1
+    assert policy_worker.run_epoch(learning_database, NOW) == 0
+    with Session(learning_database) as db:
+        learners = db.exec(select(PolicyLearner)).all()
+        assert {row.device: row.checkpoint["replay_count"] for row in learners} == {
+            "wearer": 0,
+            "nonwearer": 1,
+        }
+        assert db.exec(select(PolicyTransition)).one().replay_index == 1

@@ -122,14 +122,16 @@ class ConstrainedConservativeDoubleDQN:
             else [validate_transition(row, self.width) for row in offline]
         )
         self.buffer = []
+        self.replay_count = 0
         self.write = 0
         self.refit_day = 0
         self.owed = 0
         self.offline_source = "shared_device" if self.offline else "none"
 
     def store(self, rows: list) -> None:
-        for source in rows:
-            row = validate_transition(source, self.width)
+        self._require_replay()
+        for row in [validate_transition(source, self.width) for source in rows]:
+            self.replay_count += 1
             if len(self.buffer) < self.config.replay_capacity:
                 self.buffer.append(row)
             else:
@@ -157,13 +159,17 @@ class ConstrainedConservativeDoubleDQN:
                 self.config.cql_alpha_offline,
             )
 
+    def refit_due(self, count: int, day: int) -> bool:
+        return (
+            count >= self.config.batch_size
+            and day - self.refit_day >= self.config.retrain_period_days
+        )
+
     def learn(self, rows: list, day: int) -> None:
         """Accumulate source update credits, keeping the policy fixed between refits."""
         self.store(rows)
         self.owed += self.config.updates_per_epoch * len(rows)
-        if len(self.buffer) < self.config.batch_size:
-            return
-        if day - self.refit_day < self.config.retrain_period_days:
+        if not self.refit_due(len(self.buffer), day):
             return
         self.refit_day = day
         for _ in range(self.owed):
@@ -223,7 +229,7 @@ class ConstrainedConservativeDoubleDQN:
     def checkpoint(self) -> dict:
         """Replay is stored in the transition ledger, independently of this checkpoint."""
         return {
-            "format_version": 1,
+            "format_version": 2,
             "base_version": self.base_version,
             "config_sha256": self.config.digest,
             "online": [p.tolist() for p in self.online.parameters()],
@@ -234,17 +240,34 @@ class ConstrainedConservativeDoubleDQN:
             "rng": self.rng.bit_generator.state,
             "refit_day": self.refit_day,
             "owed": self.owed,
+            "replay_count": self.replay_count,
             "replay_write": self.write,
             "offline_source": self.offline_source,
         }
 
-    def restore(self, checkpoint: dict) -> None:
+    def _require_replay(self):
+        if len(self.buffer) != min(self.replay_count, self.config.replay_capacity):
+            raise ValueError("Restore the personal replay ledger before continuation")
+
+    def portable_checkpoint(self) -> dict:
+        """Include retained personal replay in oldest-to-newest insertion order."""
+        self._require_replay()
+        return {
+            "checkpoint": self.checkpoint(),
+            "replay": self.buffer[self.write :] + self.buffer[: self.write],
+        }
+
+    def restore_portable(self, state: dict) -> None:
+        self.restore(state["checkpoint"], replay=state["replay"])
+
+    def restore(self, checkpoint: dict, *, replay: list | None = None) -> None:
         if (
-            checkpoint.get("format_version") != 1
+            checkpoint.get("format_version") not in (1, 2)
             or checkpoint.get("base_version") != self.base_version
             or checkpoint.get("config_sha256") != self.config.digest
         ):
             raise ValueError("Incompatible policy checkpoint")
+        parameters = []
         for key, destination in (
             ("online", self.online.parameters()),
             ("target", self.target.parameters()),
@@ -260,33 +283,61 @@ class ConstrainedConservativeDoubleDQN:
                     raise ValueError("Invalid checkpoint dimensions")
                 if key == "velocity" and (value < 0).any():
                     raise ValueError("Invalid Adam variance")
-                target[...] = value
+                parameters.append((target, value))
         for key in ("updates", "refit_day", "owed"):
-            if not isinstance(checkpoint[key], int) or checkpoint[key] < 0:
+            if type(checkpoint.get(key)) is not int or checkpoint[key] < 0:
                 raise ValueError("Invalid checkpoint counter")
-        self.online.updates = checkpoint["updates"]
-        self.refit_day = checkpoint["refit_day"]
-        self.owed = checkpoint["owed"]
-        self.rng.bit_generator.state = checkpoint["rng"]
-        self.write = checkpoint.get("replay_write", 0)
-        if (
-            not isinstance(self.write, int)
-            or not 0 <= self.write < self.config.replay_capacity
-        ):
+        write = checkpoint.get("replay_write", 0)
+        capacity = self.config.replay_capacity
+        if type(write) is not int or not 0 <= write < capacity:
             raise ValueError("Invalid replay position")
+        if checkpoint.get("format_version") == 1 and "replay_count" not in checkpoint:
+            # Legacy live checkpoints store all applied and outstanding update credits.
+            count, remainder = divmod(
+                checkpoint["updates"] + checkpoint["owed"],
+                self.config.updates_per_epoch,
+            )
+            if remainder:
+                raise ValueError(
+                    "Legacy checkpoint requires the migrated replay ledger"
+                )
+        else:
+            count = checkpoint.get("replay_count")
+        if (
+            type(count) is not int
+            or count < 0
+            or write != max(0, count - capacity) % capacity
+        ):
+            raise ValueError("Checkpoint and replay count disagree")
         if checkpoint.get(
             "offline_source", self.offline_source
         ) != self.offline_source or checkpoint.get("participant_offline"):
             raise ValueError("Incompatible offline replay source")
+        buffer = [] if replay is None else self._replay_ring(replay, count, write)
+        # Validate everything before replacing the current training state.
+        rng = np.random.default_rng(0)
+        rng.bit_generator.state = checkpoint["rng"]
+        for destination, value in parameters:
+            destination[...] = value
+        self.online.updates = checkpoint["updates"]
+        self.refit_day = checkpoint["refit_day"]
+        self.owed = checkpoint["owed"]
+        self.rng = rng
+        self.write = write
+        self.replay_count = count
+        self.buffer = buffer
+
+    def _replay_ring(self, rows, count, write):
+        if len(rows) > self.config.replay_capacity:
+            raise ValueError("Replay exceeds configured capacity")
+        if len(rows) != min(count, self.config.replay_capacity):
+            raise ValueError("Checkpoint and replay ledger disagree")
+        rows = [validate_transition(row, self.width) for row in rows]
+        return rows[-write:] + rows[:-write] if write else rows
 
     def restore_replay(self, rows: list) -> None:
         """Rebuild the ring from the ledger's oldest-to-newest retained rows."""
-        rows = [validate_transition(row, self.width) for row in rows]
-        if len(rows) > self.config.replay_capacity:
-            raise ValueError("Replay exceeds configured capacity")
-        if self.write and len(rows) != self.config.replay_capacity:
-            raise ValueError("Checkpoint and replay ledger disagree")
-        self.buffer = rows[-self.write :] + rows[: -self.write] if self.write else rows
+        self.buffer = self._replay_ring(rows, self.replay_count, self.write)
 
     @property
     def revision(self) -> str:

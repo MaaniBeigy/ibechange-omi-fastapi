@@ -194,7 +194,7 @@ def test_cli_forwards_training_configuration(monkeypatch, tmp_path):
     )
     training.main()
     export.assert_called_once_with(
-        Path("log.gz"), Path("run.json"), tmp_path, 20000, 0, 2000, 0, None
+        Path("log.gz"), Path("run.json"), tmp_path, 20000, 0, 2000, 0, None, None, 100
     )
 
 
@@ -215,3 +215,35 @@ def test_replay_archive_rejects_corruption_and_invalid_masks(tmp_path):
     np.savez(path, **{key: value[:0] for key, value in arrays.items()})
     with pytest.raises(ValueError, match="lengths"):
         read_replay(path, len(state_fields(False)))
+
+
+def test_offline_export_continues_interrupted_optimizer(tmp_path, monkeypatch):
+    log, run = tmp_path / "log.gz", tmp_path / "run.json"
+    write_log(log, [logged_row(i >= 2, participant=str(i)) for i in range(4)])
+    run.write_text(
+        json.dumps(
+            dict(
+                arms=["A"],
+                scales=["fielded"],
+                overrides={"agent.batch_size": 2},
+                cohorts=source_cohorts(),
+            )
+        )
+    )
+    training.export(log, run, tmp_path / "control", 2, 10, 5, 17)
+    checkpoints = tmp_path / "checkpoint"
+    save = training.save_checkpoint
+
+    def interrupt(path, state):
+        save(path, state)
+        if path.stem == "wearer" and state["checkpoint"]["updates"] == 2:
+            raise InterruptedError
+
+    monkeypatch.setattr(training, "save_checkpoint", interrupt)
+    args = (log, run, tmp_path / "resumed", 2, 10, 5, 17, None, checkpoints, 2)
+    with pytest.raises(InterruptedError):
+        training.export(*args)
+    monkeypatch.setattr(training, "save_checkpoint", save)
+    training.export(*args)
+    for path in (tmp_path / "control").iterdir():
+        assert path.read_bytes() == (tmp_path / "resumed" / path.name).read_bytes()

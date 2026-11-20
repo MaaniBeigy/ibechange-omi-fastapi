@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
 from app.models.artemis import MissionScheduledStep
@@ -28,12 +29,46 @@ from app.services.rl_policy import (
     InfeasibleQueueError,
     QueueItem,
     decide_epoch,
+    feedback_type,
     load_policy_artifacts,
     policy_kind,
 )
 from app.utils.helpers import _aware_utc, _to_naive_utc
 
 DeadlineResolver = Callable[[Session, SelectedContent, dict, datetime], datetime | None]
+
+
+def current_queue(db, user_id, epoch):
+    day = (
+        _aware_utc(epoch)
+        .astimezone(ZoneInfo(os.getenv("POLICY_TIMEZONE", "Europe/Berlin")))
+        .date()
+    )
+    # Once a participant has daily CS plans, a legacy queue must not reappear tomorrow.
+    rows = (
+        select(SelectedContent)
+        .where(
+            SelectedContent.user_id == user_id,
+            SelectedContent.is_deleted == False,
+            or_(
+                SelectedContent.delivery_date == None,
+                SelectedContent.delivery_date <= day,
+            ),
+        )
+        .order_by(
+            SelectedContent.delivery_date.desc().nulls_last(),
+            func.coalesce(
+                SelectedContent.source_created_at,
+                SelectedContent.modified_at,
+                SelectedContent.created_at,
+            ).desc(),
+            SelectedContent.id.desc(),
+        )
+        .limit(1)
+        .execution_options(populate_existing=True)
+    )
+    selected = db.exec(rows).first()
+    return selected if selected and selected.delivery_date in (None, day) else None
 
 
 def _source_time(value: str) -> datetime | None:
@@ -62,6 +97,15 @@ def resolve_reminder_deadline(
     """Use today's last Artemis step, or the selected mission's global end."""
     zone = ZoneInfo(os.getenv("POLICY_TIMEZONE", "Europe/Berlin"))
     day = _aware_utc(epoch).astimezone(zone).date()
+    if selected.delivery_date is not None:
+        limits = [
+            value
+            for value in (selected.task_scheduled_for, selected.mission_end_time)
+            if value is not None
+        ]
+        if content.get("latest_time"):
+            limits.append(datetime.fromisoformat(content["latest_time"]))
+        return min(map(_aware_utc, limits)) if limits else _day_bounds(day, zone)[1]
     steps = db.exec(
         select(MissionScheduledStep).where(
             MissionScheduledStep.user_id == selected.user_id,
@@ -144,7 +188,7 @@ def _delivery_counts(
             (
                 _aware_utc(plan.scheduled_for).astimezone(zone).date(),
                 recommendation.content_id,
-                plan.content_type or recommendation.content_type,
+                feedback_type(plan.content_type or recommendation.content_type),
                 mission.mission_id if mission else None,
                 plan.mission_process_id,
             )
@@ -168,7 +212,7 @@ def _delivery_counts(
             (
                 _aware_utc(event.event_start_time).astimezone(zone).date(),
                 properties.get("content_id"),
-                properties.get("content_type"),
+                feedback_type(properties.get("content_type")),
                 properties.get("mission_id"),
                 properties.get("mission_process_id"),
             )
@@ -194,7 +238,8 @@ def generate_recommendation_plan(
     if db.exec(
         select(PolicyDecision).where(
             PolicyDecision.user_id == selected.user_id,
-            PolicyDecision.decided_at == epoch,
+            PolicyDecision.superseded_by == None,
+            PolicyDecision.decided_at >= epoch,
         )
     ).first():
         return None
@@ -202,7 +247,9 @@ def generate_recommendation_plan(
     zone = ZoneInfo(os.getenv("POLICY_TIMEZONE", "Europe/Berlin"))
     local_epoch = epoch.astimezone(zone)
     day = local_epoch.date()
-    _, day_end = _day_bounds(day, zone)
+    if selected.delivery_date not in (None, day):
+        return None
+    day_begin, day_end = _day_bounds(day, zone)
     week_start = day - timedelta(days=day.weekday())
     week_begin, _ = _day_bounds(week_start, zone)
     prior = db.exec(
@@ -220,17 +267,18 @@ def generate_recommendation_plan(
     )
     combined_counts = planned_counts | confirmed_counts
     unmatched_confirmed = confirmed_counts - planned_counts
-    sent_keys = {
-        key
-        for key in db.exec(
-            select(RecommendationPlan.occurrence_key).where(
-                RecommendationPlan.user_id == selected.user_id,
-                RecommendationPlan.plan_id == selected.id,
-                RecommendationPlan.is_deleted == False,
-            )
-        ).all()
-        if key
-    }
+    sent = select(RecommendationPlan.occurrence_key).where(
+        RecommendationPlan.user_id == selected.user_id,
+        RecommendationPlan.is_deleted == False,
+    )
+    if selected.delivery_date is None:
+        sent = sent.where(RecommendationPlan.plan_id == selected.id)
+    else:
+        sent = sent.where(
+            RecommendationPlan.scheduled_for >= day_begin,
+            RecommendationPlan.scheduled_for < day_end,
+        )
+    sent_keys = set(db.exec(sent).all())
     occurrences = []
     for row in _occurrences(selected.contents or [], day):
         index, key, content = row
@@ -239,7 +287,7 @@ def generate_recommendation_plan(
         identity = (
             day,
             content["id"],
-            content["type"],
+            feedback_type(content["type"]),
             content["mission_id"],
             content.get("mission_process_id"),
         )
@@ -275,6 +323,10 @@ def generate_recommendation_plan(
     for row in occurrences:
         kind = policy_kind(row[2]["type"])
         if remaining_by_class[kind] == 0:
+            if selected.delivery_date is not None:
+                raise InfeasibleQueueError(
+                    "Daily CS plan exceeds the content class limit"
+                )
             if kind == "reminder":
                 deadline = deadline_resolver(db, selected, row[2], epoch)
                 if deadline is not None and _aware_utc(deadline) <= day_end:
@@ -308,24 +360,46 @@ def generate_recommendation_plan(
     items = []
     deadlines = []
     for _, _, content in occurrences:
-        if content["type"] == "reminder":
+        earliest_minute = 0
+        if content["type"] == "hour_reminder":
+            earliest = (
+                _aware_utc(selected.task_scheduled_for) - timedelta(hours=1)
+            ).astimezone(zone)
+            earliest_minute = (
+                (
+                    earliest.hour * 60
+                    + earliest.minute
+                    + int(bool(earliest.second or earliest.microsecond))
+                )
+                if earliest.date() == day
+                else (1440 if earliest.date() > day else 0)
+            )
+        if policy_kind(content["type"]) == "reminder":
             deadline = deadline_resolver(db, selected, content, epoch)
             if deadline is None:
                 raise InfeasibleQueueError(
                     "Reminder has no Artemis deadline or mission end time"
                 )
             deadline = _aware_utc(deadline)
-            local_deadline = deadline.astimezone(zone)
-            if deadline < epoch:
+        else:
+            deadline = (
+                datetime.fromisoformat(content["latest_time"])
+                if content.get("latest_time")
+                else None
+            )
+        deadline_minute = waking_deadline
+        if deadline is not None:
+            last = (
+                deadline - timedelta(microseconds=1)
+                if selected.delivery_date is not None or content.get("latest_time")
+                else deadline
+            )
+            local_deadline = last.astimezone(zone)
+            if last < epoch:
                 deadline_minute = -1
             elif local_deadline.date() == day:
                 deadline_minute = local_deadline.hour * 60 + local_deadline.minute
-            else:
-                deadline_minute = waking_deadline
-        else:
-            deadline = None
-            deadline_minute = waking_deadline
-        items.append(QueueItem(content["type"], deadline_minute))
+        items.append(QueueItem(content["type"], deadline_minute, earliest_minute))
         deadlines.append(deadline)
 
     sent_day = sum(
@@ -347,6 +421,9 @@ def generate_recommendation_plan(
         (item.deadline_minute for item in items if item.kind == "reminder"),
         default=None,
     )
+    if selected.task_scheduled_for is not None:
+        task_time = _aware_utc(selected.task_scheduled_for).astimezone(zone)
+        mission_minute = task_time.hour * 60 + task_time.minute
     decision = decide_epoch(
         policy,
         tuple(items),

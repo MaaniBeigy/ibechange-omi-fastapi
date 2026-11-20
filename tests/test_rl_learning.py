@@ -267,3 +267,33 @@ def test_multi_layer_updates_match_original_constrained_cddqn_reference():
             for value, target in zip(actual, expected[name]):
                 np.testing.assert_allclose(value, target, rtol=1e-13, atol=1e-15)
         assert diagnostics["td_error"] == pytest.approx(expected["diagnostics"][0])
+
+
+def test_legacy_online_checkpoint_recovers_replay_count():
+    learner = ConstrainedConservativeDoubleDQN(artifact())
+    learner.learn([transition(), transition()], day=0)
+    legacy = dict(learner.checkpoint(), format_version=1)
+    del legacy["replay_count"]
+    clone = ConstrainedConservativeDoubleDQN(artifact())
+    clone.restore(legacy)
+    clone.restore_replay(learner.buffer)
+    assert clone.portable_checkpoint() == learner.portable_checkpoint()
+    with pytest.raises(ValueError, match="count"):
+        clone.restore(dict(learner.checkpoint(), replay_count=-1))
+
+
+def test_truncated_portable_restore_preserves_running_learner():
+    learner = ConstrainedConservativeDoubleDQN(artifact())
+    learner.learn([transition(), transition()], day=0)
+    original = learner.portable_checkpoint()
+    learner.learn([], day=1)
+    fitted = learner.portable_checkpoint()
+    with pytest.raises(ValueError, match="disagree"):
+        learner.restore_portable(dict(original, replay=[]))
+    assert learner.portable_checkpoint() == fitted
+    learner.restore(original["checkpoint"])
+    with pytest.raises(ValueError, match="Restore the personal replay"):
+        learner.learn([transition()], day=1)
+    learner.restore_replay(original["replay"])
+    learner.learn([], day=1)
+    assert learner.portable_checkpoint() == fitted

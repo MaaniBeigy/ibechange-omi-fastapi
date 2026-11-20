@@ -880,11 +880,11 @@ def test_plan_router_uses_latest_selection_for_each_user(database, epoch):
         first.created_at = epoch - timedelta(days=1)
         second.created_at = epoch
         db.commit()
-        assert [row.id for row in router._latest_selections(db)] == [newer]
+        assert router.current_queue(db, user_id, epoch).id == newer
         first.created_at = epoch + timedelta(minutes=1)
         second.created_at = epoch - timedelta(days=1)
         db.commit()
-        assert [row.id for row in router._latest_selections(db)] == [older]
+        assert router.current_queue(db, user_id, epoch).id == older
 
 
 def test_plan_router_rolls_back_unexpected_decision_error(monkeypatch):
@@ -896,12 +896,12 @@ def test_plan_router_rolls_back_unexpected_decision_error(monkeypatch):
             calls.append("lock")
 
         def exec(self, statement):
-            return SimpleNamespace(one=lambda: selected)
+            return SimpleNamespace(first=lambda: selected)
 
         def rollback(self):
             calls.append("rollback")
 
-    monkeypatch.setattr(router, "_latest_selections", lambda db: [selected])
+    monkeypatch.setattr(router, "_eligible_users", lambda db: [selected.user_id])
 
     def failure(*args):
         raise OSError("database unavailable")

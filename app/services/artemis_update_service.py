@@ -23,6 +23,7 @@ from app.models.user import HealthHabitAssessment, MissionContent, User
 from app.schemas.update import parse_artemis_message
 from app.services.mission_schedule_service import record_scheduled_snapshot
 from app.services.policy_learning_service import lock_user
+from app.services.rl_policy import feedback_type
 from app.utils.helpers import _aware_utc, _to_naive_utc
 
 
@@ -85,7 +86,8 @@ def _link_sent_decision(db: Session, event: Event) -> None:
             RecommendationPlan.scheduled_for <= _aware_utc(event.event_start_time),
             RecommendationPlan.scheduled_for
             >= _aware_utc(event.event_start_time) - timedelta(minutes=60),
-            RecommendationPlan.is_deleted == False,
+            (RecommendationPlan.is_deleted == False)
+            | (RecommendationPlan.deleted_at >= _aware_utc(event.event_start_time)),
         )
         .order_by(RecommendationPlan.scheduled_for.desc())
     ).all()
@@ -93,8 +95,8 @@ def _link_sent_decision(db: Session, event: Event) -> None:
         mission = db.get(Mission, plan.mission_id) if plan.mission_id else None
         if (
             recommendation.content_id != properties.get("content_id")
-            or (plan.content_type or recommendation.content_type)
-            != properties.get("content_type")
+            or feedback_type(plan.content_type or recommendation.content_type)
+            != feedback_type(properties.get("content_type"))
             or (
                 mission is not None
                 and mission.mission_id != properties.get("mission_id")
@@ -115,6 +117,9 @@ def _link_sent_decision(db: Session, event: Event) -> None:
             )
         ).first()
         if decision and decision.outcome_event_id is None:
+            if plan.is_deleted:
+                plan.is_deleted = False
+                plan.deleted_at = None
             decision.outcome_event_id = event.id
             db.add(decision)
             return
@@ -338,7 +343,11 @@ def _apply(db: Session, event_name: str, payload, message_id: str, raw: dict) ->
             payload.process_id,
             properties,
         )
-    elif event_name == "mission_accomplished":
+    elif event_name in {
+        "mission_accomplished",
+        "mission_not_achieved",
+        "mission_changed",
+    }:
         mission = _mission(db, payload.mission_id)
         _record_event(
             db,
@@ -347,6 +356,7 @@ def _apply(db: Session, event_name: str, payload, message_id: str, raw: dict) ->
             payload.created_at,
             payload.process_id,
             {
+                **({"end_reason": payload.end_reason} if payload.end_reason else {}),
                 "mission_id": payload.mission_id,
                 "mission_process_id": payload.mission_process_id,
             },
@@ -378,7 +388,14 @@ def _apply(db: Session, event_name: str, payload, message_id: str, raw: dict) ->
                 current.mission_end_time = accomplished_at
                 current.modified_at = datetime.now(timezone.utc)
                 db.add(current)
-    elif event_name in {"notification_sent", "notification_opened"}:
+    elif event_name in {
+        "notification_sent",
+        "notification_opened",
+        "notification_rated",
+        "notification_saved",
+        "notification_unsaved",
+        "resource_link_opened",
+    }:
         props = payload.properties.model_dump(mode="json")
         _mission(db, props["mission_id"])
         _content(db, props["content_id"], props["content_type"], props["mission_id"])
