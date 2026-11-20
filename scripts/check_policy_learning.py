@@ -28,6 +28,7 @@ def run_check(
     mode: str = "online",
     checkpoint_path: Path | None = None,
     device: str = "nonwearer",
+    audit_dir: Path | None = None,
 ) -> tuple:
     """Exercise actual policy and gradient updates with explicitly artificial responses."""
     if days < 1 or mode not in {"online", "frozen"}:
@@ -41,6 +42,8 @@ def run_check(
     window = float(config["response_window_min"])
     history, pending, daily = [], [], []
     last_send, sent_week, ema, violations = -10080, 0, 0.0, 0
+    if checkpoint_path and audit_dir is None:
+        audit_dir = checkpoint_path.with_suffix(".audit")
 
     if checkpoint_path and checkpoint_path.exists():
         saved = json.loads(checkpoint_path.read_text(encoding="utf-8"))
@@ -65,13 +68,26 @@ def run_check(
             if entry["send"]:
                 history.append((entry["opened"], entry["delay"]))
                 ema = 0.85 * ema + 0.15 * entry["row"]["objectives"]["engagement"]
+        first_index = learner.replay_count + 1
         if mode == "online":
-            learner.learn([p["row"] for p in ready], day)
+            learner.learn(
+                [p["row"] for p in ready], day, updates.append if audit_dir else None
+            )
+        if audit_dir:
+            for index, entry in enumerate(ready, first_index):
+                released.append(
+                    dict(
+                        replay_index=index if mode == "online" else None,
+                        decision_minute=entry.get("decision_minute"),
+                        **entry["row"],
+                    )
+                )
         pending = [
             p for p in pending if not (p["ready"] <= now and p["row"] is not None)
         ]
 
     for day in range(len(daily), days):
+        choices, updates, released = [], [], []
         if day % 7 == 0:
             sent_week = 0
         items = (
@@ -126,6 +142,18 @@ def run_check(
                 )
             decisions += 1
             action = decision.action
+            choices.append(
+                dict(
+                    decision_minute=now,
+                    policy_version=decision.policy_version,
+                    state=decision.state.tolist(),
+                    safe_mask=list(decision.safe_mask),
+                    q_values=decision.q_values,
+                    action_probabilities=decision.action_probabilities,
+                    action=action,
+                    propensity=decision.propensity,
+                )
+            )
             violations += int(not decision.safe_mask[action])
             opened, delay, engagement = False, 0.0, 0.0
             if action:
@@ -160,6 +188,7 @@ def run_check(
                 + config["weight_miss"] * objectives["miss"]
             )
             previous = dict(
+                decision_minute=now,
                 state=decision.state.tolist(),
                 action=action,
                 mask=list(decision.safe_mask),
@@ -200,6 +229,20 @@ def run_check(
                 policy_revision=learner.revision,
             )
         )
+        if audit_dir:
+            save_checkpoint(
+                audit_dir / f"day-{day + 1:05d}.json",
+                dict(
+                    seed=seed,
+                    device=device,
+                    mode=mode,
+                    base_version=artifact.version,
+                    day=day + 1,
+                    decisions=choices,
+                    transitions=released,
+                    updates=updates,
+                ),
+            )
         if checkpoint_path:
             save_checkpoint(
                 checkpoint_path,
@@ -250,7 +293,12 @@ def main() -> None:
     )
     args = parser.parse_args()
     daily, summary = run_check(
-        args.days, args.seed, args.mode, args.checkpoint, args.device
+        args.days,
+        args.seed,
+        args.mode,
+        args.checkpoint,
+        args.device,
+        args.out / "audit",
     )
     args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / "daily.csv").open("w", newline="", encoding="utf-8") as handle:

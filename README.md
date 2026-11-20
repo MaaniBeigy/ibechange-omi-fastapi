@@ -103,6 +103,13 @@ PostgreSQL persists plans, replay and per-user optimizer checkpoints across
 container restarts. The external `metabase_data` volume remains required by the
 existing analytics services.
 
+On the INT host, run `export COMPOSE_FILE=docker-compose.yml:compose.int.yml`
+in the deployment shell under `/home/tue/omi`. The overlay mounts the
+`ARTEMIS_CA_CERT` file read-only into the API and consumer. The integration
+delivery script reads `EUT_PRE_BASE_URL` and appends `/internal/recommendations`.
+For token-free INT delivery leave `EUT_PRE_TOKEN` unset in the environment
+of the process that runs the script.
+
 Run checks against the dedicated disposable test database, separated from the
 application database:
 
@@ -328,6 +335,40 @@ target step count, source data, configuration and seed. The synthetic learning
 check accepts `--checkpoint build/check-day.json` and `--device wearer` or
 `nonwearer`. Its `--days` value is the total run length. The Compose tools use
 separate checkpoint paths for pretraining, online verification and frozen verification.
+
+### Inspect decision and training history
+
+| Stored record | Contents |
+|---|---|
+| PostgreSQL `PolicyDecision` | Participant, epoch, plan occurrence, exact policy revision, observation, feasible actions, chosen action and its propensity. `q_values` and `action_probabilities` both use the order **skip, send**, including forced decisions. |
+| PostgreSQL `PolicyTrainingUpdate` | One row per learner and optimizer step. `fitted_at` is the policy epoch. Each row records the learning rate, CQL coefficient, mean squared TD loss, unweighted safe-action CQL loss, total loss, mean absolute TD error, ordered draw indices, pre-update Q-values, TD targets and signed residuals. Total loss equals TD loss plus the CQL coefficient times CQL loss. |
+| Offline `con_cddqn_<device>.training.json.gz` | Shared pretraining history, replay archive checksum, completed update count and source rows. Each source row identifies the one-based CSV data record (header excluded), source participant, day and logged chosen-action propensity. A missing source propensity is JSON null. |
+| Synthetic check `<out>/audit/day-*.json` | Per-day decisions, released transitions and optimizer steps. The absolute simulation minute links a transition to its decision. Use the same output and checkpoint locations when resuming. |
+
+Join an online update to `PolicyLearner` by `learner_id` for its participant,
+device and base model version. Minibatch order is the zero-based `offline_indices`
+into that model's shared replay and source-row list, followed by the one-based
+`personal_replay_indices` into that learner's `PolicyTransition.replay_index`.
+Repeated indices are repeated draws. Every position has corresponding entries
+in `q_values`, `targets` and `td_residuals`. The personal transition links to
+its original decision and behavior propensity even after the in-memory ring wraps.
+
+The update rows, replay consumption and optimizer checkpoint commit in one
+PostgreSQL transaction. An interrupted fit retries from the previous commit.
+Add `--include-audit` to the participant checkpoint export to include decision
+scores, consumed transitions and recorded updates through its cutoff. Independent
+Python training loops can pass `on_update=records.append` to `learn` or
+`pretrain` to capture the same diagnostics.
+
+Migration `20261120_08` fills both historical action probabilities from each
+binary decision's recorded propensity. Historical live Q-values remain null
+and update history begins at the first instrumented fit. The optimizer
+continues its existing update numbering.
+
+When resuming a legacy offline checkpoint, the exporter replays its prefix
+from the recorded training sample and seed. It includes the reconstructed
+updates when both networks, Adam state, counters and RNG state match the
+checkpoint exactly. Otherwise the audit starts at the next observed update.
 
 Online action selection uses epsilon-greedy exploration within the safe action
 set, decreasing from 0.05 to 0.01 over 90 days. Each decision records its exact

@@ -462,6 +462,8 @@ def generate_recommendation_plan(
         decided_at=epoch,
         action=decision.action,
         propensity=decision.propensity,
+        q_values=decision.q_values,
+        action_probabilities=decision.action_probabilities,
         state=decision.state.tolist(),
         safe_mask=list(decision.safe_mask),
         policy_version=policy_version,

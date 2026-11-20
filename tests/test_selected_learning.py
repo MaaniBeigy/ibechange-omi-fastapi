@@ -10,7 +10,11 @@ import numpy as np
 import pytest
 from sqlmodel import Session, select
 
-from app.models.policy_learning import PolicyLearner, PolicyTransition
+from app.models.policy_learning import (
+    PolicyLearner,
+    PolicyTrainingUpdate,
+    PolicyTransition,
+)
 from app.rl.learner import ConstrainedConservativeDoubleDQN, TrainingConfig
 from app.services import policy_learning_service as service
 from app.services.rl_policy import (
@@ -124,6 +128,9 @@ def test_online_exploration_records_exact_probabilities_and_keeps_forced_actions
             break
     assert found[1].propensity == pytest.approx(0.025)
     assert found[0].propensity == pytest.approx(0.975)
+    for choice in found.values():
+        assert choice.action_probabilities == pytest.approx([0.975, 0.025])
+        assert choice.q_values == [0.0, 0.0]
     assert exploration_probability(
         dict(model.metadata, learning_day=45)
     ) == pytest.approx(0.03)
@@ -137,6 +144,8 @@ def test_online_exploration_records_exact_probabilities_and_keeps_forced_actions
     forced = decide_epoch(**dict(arguments, minute=1305), exploration_seed=20)
     assert forced.action == 1
     assert forced.propensity == 1
+    assert forced.action_probabilities == [0.0, 1.0]
+    assert forced.q_values == [0.0, 0.0]
     assert (
         model.version
         == PolicyArtifact(
@@ -155,14 +164,14 @@ def test_new_rct_users_share_device_history_and_keep_online_learning_separate(
     draw = ConstrainedConservativeDoubleDQN._draw
 
     def capture(learner):
-        batch = draw(learner)
+        batch, offline, personal = draw(learner)
         sampled.append(
             (
                 sum(id(row) in shared_ids for row in batch),
                 [row for row in batch if id(row) not in shared_ids],
             )
         )
-        return batch
+        return batch, offline, personal
 
     monkeypatch.setattr(ConstrainedConservativeDoubleDQN, "_draw", capture)
     with Session(learning_database) as db:
@@ -191,6 +200,15 @@ def test_new_rct_users_share_device_history_and_keep_online_learning_separate(
         assert "participant_offline" not in stored.checkpoint
         assert stored.checkpoint["updates"] == 128
         assert len(sampled) == 128
+        audits = db.exec(
+            select(PolicyTrainingUpdate).order_by(PolicyTrainingUpdate.update_number)
+        ).all()
+        assert [u.update_number for u in audits] == list(range(1, 129))
+        for u in audits:
+            assert u.learner_id == stored.id
+            assert len(u.offline_indices) == 8 and len(u.personal_replay_indices) == 24
+            assert set(u.personal_replay_indices) <= set(range(1, 33))
+            assert len(u.targets) == len(u.q_values) == len(u.td_residuals) == 32
         assert all(count == 8 and len(online) == 24 for count, online in sampled)
         assert all(
             row["state"] == [0.7] * len(model.metadata["fields"])
@@ -207,6 +225,7 @@ def test_new_rct_users_share_device_history_and_keep_online_learning_separate(
             db, user.id, model, NOW + timedelta(days=1, minutes=1)
         )
         assert stored.checkpoint == before
+        assert len(db.exec(select(PolicyTrainingUpdate)).all()) == 128
         np.testing.assert_array_equal(restored.weights[0], fitted.weights[0])
         assert not np.array_equal(fitted.weights[0], model.weights[0])
         assert set(shared_ids) == {id(row) for row in model.offline}
@@ -294,7 +313,20 @@ def test_learning_check_resumes_at_day_boundary(tmp_path, device, mode):
     path = tmp_path / "training.json"
     run_check(2, 11, mode, path, device)
     resumed = run_check(3, 11, mode, path, device)
-    assert resumed == run_check(3, 11, mode, device=device)
+    control = tmp_path / "control"
+    assert resumed == run_check(3, 11, mode, device=device, audit_dir=control)
+    files = sorted(control.glob("day-*.json"))
+    assert len(files) == 3
+    for file in files:
+        assert (
+            file.read_bytes() == (path.with_suffix(".audit") / file.name).read_bytes()
+        )
+        day = json.loads(file.read_bytes())
+        assert all(
+            d["propensity"] == d["action_probabilities"][d["action"]]
+            for d in day["decisions"]
+        )
+        assert all(isinstance(t["decision_minute"], int) for t in day["transitions"])
     with pytest.raises(ValueError, match="precedes"):
         run_check(1, 11, mode, path, device)
     with pytest.raises(ValueError, match="seed"):

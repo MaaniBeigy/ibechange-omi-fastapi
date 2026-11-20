@@ -83,6 +83,9 @@ def validate_transition(row: dict, width: int) -> dict:
         result[key] = value.astype(bool).tolist()
     if row["action"] not in (0, 1) or not result["safe_mask"][row["action"]]:
         raise ValueError("Replay action is infeasible")
+    propensity = row.get("propensity")
+    if propensity is not None and not 0 < propensity <= 1:
+        raise ValueError("Invalid logged action propensity")
     if row["bootstrap"] not in (0, 1):
         raise ValueError("Invalid replay bootstrap")
     if row["bootstrap"] and not any(result["next_safe_mask"]):
@@ -138,26 +141,38 @@ class ConstrainedConservativeDoubleDQN:
                 self.buffer[self.write] = row
                 self.write = (self.write + 1) % self.config.replay_capacity
 
-    def _draw(self) -> list:
+    def _draw(self) -> tuple:
         size = self.config.batch_size
         old_count = (
             int(round(self.config.offline_batch_share * size)) if self.offline else 0
         )
         old = self.rng.integers(len(self.offline), size=old_count) if old_count else []
         fresh = self.rng.integers(len(self.buffer), size=size - old_count)
-        return [self.offline[i] for i in old] + [self.buffer[i] for i in fresh]
+        rows = [self.offline[i] for i in old] + [self.buffer[i] for i in fresh]
+        # Translate physical ring slots to immutable, one-based ledger ordinals.
+        oldest = self.replay_count - len(self.buffer) + 1
+        personal = oldest + (fresh - self.write) % len(self.buffer)
+        return rows, list(map(int, old)), personal.tolist()
 
-    def pretrain(self, steps: int) -> None:
+    def pretrain(self, steps: int, on_update=None) -> None:
         """Fit an optional exported behavior log using the source offline rate."""
         if not self.offline:
             return
         for _ in range(steps):
             indexes = self.rng.integers(len(self.offline), size=self.config.batch_size)
-            self.update(
+            result = self.update(
                 [self.offline[i] for i in indexes],
                 self.config.lr_offline,
                 self.config.cql_alpha_offline,
             )
+            if on_update is not None:
+                on_update(
+                    dict(
+                        result,
+                        offline_indices=indexes.tolist(),
+                        personal_replay_indices=[],
+                    )
+                )
 
     def refit_due(self, count: int, day: int) -> bool:
         return (
@@ -165,7 +180,7 @@ class ConstrainedConservativeDoubleDQN:
             and day - self.refit_day >= self.config.retrain_period_days
         )
 
-    def learn(self, rows: list, day: int) -> None:
+    def learn(self, rows: list, day: int, on_update=None) -> None:
         """Accumulate source update credits, keeping the policy fixed between refits."""
         self.store(rows)
         self.owed += self.config.updates_per_epoch * len(rows)
@@ -173,9 +188,18 @@ class ConstrainedConservativeDoubleDQN:
             return
         self.refit_day = day
         for _ in range(self.owed):
-            self.update(
-                self._draw(), self.config.lr_online, self.config.cql_alpha_online
+            batch, offline, personal = self._draw()
+            result = self.update(
+                batch, self.config.lr_online, self.config.cql_alpha_online
             )
+            if on_update is not None:
+                on_update(
+                    dict(
+                        result,
+                        offline_indices=offline,
+                        personal_replay_indices=personal,
+                    )
+                )
         self.owed = 0
 
     def update(self, rows: list, rate: float, alpha: float) -> dict:
@@ -207,24 +231,37 @@ class ConstrainedConservativeDoubleDQN:
         predicted, hidden = self.online.forward(state)
         taken = np.zeros_like(predicted)
         taken[np.arange(len(rows)), action] = 1.0
-        residual = predicted[np.arange(len(rows)), action] - target
+        taken_q = predicted[np.arange(len(rows)), action]
+        residual = taken_q - target
         upstream = 2.0 * (predicted - target[:, None]) * taken / len(rows)
+        feasible = np.where(mask, predicted, -np.inf)
+        maximum = feasible.max(axis=1, keepdims=True)
+        weights = np.exp(feasible - maximum)
+        normalizer = weights.sum(axis=1, keepdims=True)
+        cql_loss = float((maximum[:, 0] - taken_q + np.log(normalizer[:, 0])).mean())
+        td_loss = float(np.mean(residual**2))
         if alpha:
-            shifted = np.where(mask, predicted, -np.inf)
-            shifted -= shifted.max(axis=1, keepdims=True)
-            weights = np.exp(shifted) * mask
-            upstream += (
-                alpha
-                * (weights / weights.sum(axis=1, keepdims=True) - taken)
-                / len(rows)
-            )
+            upstream += alpha * (weights / normalizer - taken) / len(rows)
         gradients = self.online.backward(state, hidden, upstream)
-        if not all(np.isfinite(gradient).all() for gradient in gradients):
+        if not np.isfinite(td_loss + alpha * cql_loss) or not all(
+            np.isfinite(gradient).all() for gradient in gradients
+        ):
             raise ValueError("Nonfinite policy gradient")
         self.online.apply(gradients, rate)
         if self.online.updates % self.config.target_copy_interval == 0:
             self.online.copy_into(self.target)
-        return {"td_error": float(np.abs(residual).mean()), "targets": target.tolist()}
+        return dict(
+            update_number=self.online.updates,
+            learning_rate=rate,
+            cql_alpha=alpha,
+            td_loss=td_loss,
+            cql_loss=cql_loss,
+            total_loss=td_loss + alpha * cql_loss,
+            td_error=float(np.abs(residual).mean()),
+            q_values=predicted.tolist(),
+            targets=target.tolist(),
+            td_residuals=residual.tolist(),
+        )
 
     def checkpoint(self) -> dict:
         """Replay is stored in the transition ledger, independently of this checkpoint."""

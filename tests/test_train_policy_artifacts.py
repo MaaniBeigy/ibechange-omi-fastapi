@@ -130,7 +130,10 @@ def test_collect_covers_all_participants_and_later_days_reproducibly(tmp_path):
 
 def test_export_trains_and_loads_both_models_and_optional_offline_replay(tmp_path):
     log, run, out = tmp_path / "log.csv.gz", tmp_path / "run.json", tmp_path / "out"
-    write_log(log, [logged_row(i >= 2, participant=str(i)) for i in range(4)])
+    write_log(
+        log,
+        [logged_row(i >= 2, participant=str(i), propensity="0.75") for i in range(4)],
+    )
     run.write_text(
         json.dumps(
             dict(
@@ -148,6 +151,27 @@ def test_export_trains_and_loads_both_models_and_optional_offline_replay(tmp_pat
         assert policy.metadata["weight_miss"] == 0.15
         assert len(policy.offline) == 2
         assert policy.metadata["source_participants"] == 2
+        data = (out / f"con_cddqn_{device}.training.json.gz").read_bytes()
+        audit = json.loads(gzip.decompress(data))
+        assert audit["base_version"] == policy.version
+        assert [u["update_number"] for u in audit["updates"]] == [1, 2, 3]
+        assert all(r["propensity"] == 0.75 for r in audit["source_rows"])
+        for update in audit["updates"]:
+            assert (
+                len(update["offline_indices"]) == 2
+                and not update["personal_replay_indices"]
+            )
+            for position, index in enumerate(update["offline_indices"]):
+                action = policy.offline[index]["action"]
+                assert update["q_values"][position][action] - update["targets"][
+                    position
+                ] == pytest.approx(update["td_residuals"][position])
+            assert update["td_loss"] == pytest.approx(
+                np.mean(np.square(update["td_residuals"]))
+            )
+            assert update["total_loss"] == pytest.approx(
+                update["td_loss"] + update["cql_alpha"] * update["cql_loss"]
+            )
         assert policy.metadata["offline_replay_scope"] == "shared_device"
         assert np.isfinite(
             policy.action_values(np.zeros(len(policy.metadata["fields"])))
@@ -161,6 +185,12 @@ def test_export_trains_and_loads_both_models_and_optional_offline_replay(tmp_pat
     with pytest.raises(ValueError, match="weight checksum"):
         PolicyArtifact.load(stem)
     stem.with_suffix(".npz").write_bytes(original)
+    audit_path = stem.with_suffix(".training.json.gz")
+    audit = audit_path.read_bytes()
+    audit_path.write_bytes(audit + b"corrupt")
+    with pytest.raises(ValueError, match="training audit checksum"):
+        PolicyArtifact.load(stem)
+    audit_path.write_bytes(audit)
     stem.with_suffix(".replay.npz").write_bytes(b"corrupt")
     with pytest.raises(ValueError, match="replay checksum"):
         PolicyArtifact.load(stem)
@@ -217,7 +247,8 @@ def test_replay_archive_rejects_corruption_and_invalid_masks(tmp_path):
         read_replay(path, len(state_fields(False)))
 
 
-def test_offline_export_continues_interrupted_optimizer(tmp_path, monkeypatch):
+@pytest.mark.parametrize("legacy", [False, True])
+def test_offline_export_continues_interrupted_optimizer(tmp_path, monkeypatch, legacy):
     log, run = tmp_path / "log.gz", tmp_path / "run.json"
     write_log(log, [logged_row(i >= 2, participant=str(i)) for i in range(4)])
     run.write_text(
@@ -243,7 +274,18 @@ def test_offline_export_continues_interrupted_optimizer(tmp_path, monkeypatch):
     args = (log, run, tmp_path / "resumed", 2, 10, 5, 17, None, checkpoints, 2)
     with pytest.raises(InterruptedError):
         training.export(*args)
+    if legacy:
+        for path in checkpoints.glob("*.json"):
+            saved = json.loads(path.read_text())
+            del saved["training_updates"]
+            save(path, saved)
     monkeypatch.setattr(training, "save_checkpoint", save)
     training.export(*args)
     for path in (tmp_path / "control").iterdir():
         assert path.read_bytes() == (tmp_path / "resumed" / path.name).read_bytes()
+    audit = json.loads(
+        gzip.decompress(
+            (tmp_path / "resumed/con_cddqn_wearer.training.json.gz").read_bytes()
+        )
+    )
+    assert [r["propensity"] for r in audit["source_rows"]] == [None, None]

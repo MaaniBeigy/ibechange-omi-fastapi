@@ -39,6 +39,28 @@ class PolicyCheckpoint(SQLModel, table=True):
     checkpoint: dict = Field(sa_type=JSONB)
 
 
+class PolicyTrainingUpdate(SQLModel, table=True):
+    """One committed optimizer step, with all arrays in minibatch order."""
+
+    __tablename__ = "PolicyTrainingUpdate"
+    learner_id: uuid.UUID = Field(primary_key=True, foreign_key="PolicyLearner.id")
+    update_number: int = Field(primary_key=True)
+    fitted_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    learning_rate: float
+    cql_alpha: float
+    td_loss: float
+    cql_loss: float
+    total_loss: float
+    td_error: float
+    offline_indices: list[int] = Field(sa_type=JSONB)
+    personal_replay_indices: list[int] = Field(sa_type=JSONB)
+    q_values: list[list[float]] = Field(sa_type=JSONB)
+    targets: list[float] = Field(sa_type=JSONB)
+    td_residuals: list[float] = Field(sa_type=JSONB)
+
+
 class PolicyTransition(SQLModel, table=True):
     __tablename__ = "PolicyTransition"
     __table_args__ = (

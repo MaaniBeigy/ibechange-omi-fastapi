@@ -319,6 +319,7 @@ class PolicyArtifact:
                 "source_decisions",
                 "source_run",
                 "runtime_training_defaults",
+                "training_audit_sha256",
             )
         }
         config_hash = hashlib.sha256(
@@ -417,6 +418,14 @@ class PolicyArtifact:
         ):
             raise ValueError("Policy architecture does not match metadata")
         offline = []
+        if (
+            "training_audit_sha256" in metadata
+            and hashlib.sha256(
+                stem.with_suffix(".training.json.gz").read_bytes()
+            ).hexdigest()
+            != metadata["training_audit_sha256"]
+        ):
+            raise ValueError("Policy training audit checksum mismatch")
         if "sampling_sha256" in metadata:
             if (
                 hashlib.sha256(
@@ -455,13 +464,15 @@ class PolicyArtifact:
 
     def decide(self, observation: np.ndarray, mask: tuple[bool, bool]) -> int:
         """Choose a feasible action using the trained send margin."""
+        return self.greedy_action(self.action_values(observation), mask)
+
+    def greedy_action(self, values: np.ndarray, mask: tuple[bool, bool]) -> int:
         if mask == (True, False):
             return 0
         if mask == (False, True):
             return 1
         if mask != (True, True):
             raise InfeasibleQueueError("No feasible policy action")
-        values = self.action_values(observation)
         return int(values[1] - values[0] > self.metadata["send_q_margin"])
 
 
@@ -503,6 +514,8 @@ class EpochDecision:
     safe_mask: tuple[bool, bool]
     policy_version: str
     propensity: float = 1.0
+    q_values: list[float] | None = None
+    action_probabilities: list[float] | None = None
 
 
 def exploration_probability(metadata: dict) -> float:
@@ -579,15 +592,24 @@ def decide_epoch(
         items,
         wearable,
     )
-    greedy = policy.decide(state, mask)
-    action, propensity = greedy, 1.0
+    values = policy.action_values(state)
+    greedy = policy.greedy_action(values, mask)
+    action, send_probability = greedy, float(greedy)
     epsilon = exploration_probability(config) if exploration_seed is not None else 0.0
     if epsilon and mask == (True, True):
         generator = np.random.default_rng(exploration_seed)
         send_probability = (1 - epsilon) * greedy + epsilon / 2
         action = int(generator.random() < send_probability)
-        propensity = send_probability if action else 1 - send_probability
-    return EpochDecision(action, state, mask, policy.version, propensity)
+    probabilities = [1 - send_probability, send_probability]
+    return EpochDecision(
+        action,
+        state,
+        mask,
+        policy.version,
+        probabilities[action],
+        values.tolist(),
+        probabilities,
+    )
 
 
 def plan_daily_queue(

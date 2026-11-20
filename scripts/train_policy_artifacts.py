@@ -102,6 +102,11 @@ def _training_row(
         "state": np.asarray([state[field] for field in fields], dtype=float),
         "next_state": np.asarray([next_state[field] for field in fields], dtype=float),
         "action": action,
+        "propensity": (
+            float(row["propensity"])
+            if row.get("propensity") not in (None, "")
+            else None
+        ),
         "reward": reward,
         "objectives": objectives,
         "elapsed_min": elapsed,
@@ -175,16 +180,17 @@ def collect_rows(
             if slot >= allocations[key]:
                 continue
             if slot == len(samples[key]):
-                samples[key].append(row)
+                samples[key].append((index + 1, row))
             else:
-                samples[key][slot] = row
+                samples[key][slot] = (index + 1, row)
     if any(len(samples[key]) != count for key, count in allocations.items()):
         raise ValueError(
             "Insufficient behavior transitions across the complete source cohort"
         )
     rows, provenance = {}, {}
     for device, members in participants.items():
-        raw = [row for key in sorted(members) for row in samples[key]]
+        selected = [entry for key in sorted(members) for entry in samples[key]]
+        raw = [row for _, row in selected]
         digest = hashlib.sha256()
         for row in raw:
             digest.update(json.dumps(row, sort_keys=True).encode("utf-8"))
@@ -198,6 +204,12 @@ def collect_rows(
             )
             for row in raw
         ]
+        for training_row, (source_row, raw_row) in zip(rows[device], selected):
+            training_row.update(
+                source_row=source_row,
+                source_key=f"{raw_row['cell']}/{raw_row['replicate']}/{raw_row['participant']}",
+                day=int(raw_row["day"]),
+            )
         provenance[device] = dict(
             method="participant_stratified_reservoir",
             seed=seed,
@@ -211,7 +223,7 @@ def collect_rows(
                     available_transitions=counts[key],
                     sampled_transitions=len(samples[key]),
                     observed_days=day_ranges[key],
-                    sampled_days=sorted({int(row["day"]) for row in samples[key]}),
+                    sampled_days=sorted({int(row["day"]) for _, row in samples[key]}),
                 )
                 for key in sorted(members)
             ],
@@ -331,8 +343,9 @@ def export(
         initial = PolicyArtifact(metadata, network.weights, network.biases)
         agent = ConstrainedConservativeDoubleDQN(initial, seed=seed, offline=rows)
         agent.rng = np.random.default_rng(seed)
+        updates = []
         if checkpoint_dir is None:
-            agent.pretrain(steps)
+            agent.pretrain(steps, updates.append)
         else:
             path = checkpoint_dir / f"{device}.json"
             if path.exists():
@@ -340,15 +353,29 @@ def export(
                 if saved["skip_prior"] != values["agent.skip_prior"]:
                     raise ValueError("Pretraining skip prior differs from checkpoint")
                 agent.restore(saved["checkpoint"])
+                updates = saved.get("training_updates", [])
                 if agent.online.updates > steps:
                     raise ValueError("Checkpoint exceeds requested pretraining steps")
+                if "training_updates" not in saved and agent.online.updates:
+                    # Accept a reconstructed prefix from a legacy checkpoint only
+                    # when both networks, the optimizer and the sampling state agree.
+                    prefix = ConstrainedConservativeDoubleDQN(
+                        initial, seed=seed, offline=rows
+                    )
+                    prefix.rng = np.random.default_rng(seed)
+                    prefix.pretrain(agent.online.updates, updates.append)
+                    if prefix.checkpoint() != agent.checkpoint():
+                        updates.clear()
             while agent.online.updates < steps:
-                agent.pretrain(min(checkpoint_steps, steps - agent.online.updates))
+                agent.pretrain(
+                    min(checkpoint_steps, steps - agent.online.updates), updates.append
+                )
                 save_checkpoint(
                     path,
                     dict(
                         checkpoint=agent.checkpoint(),
                         skip_prior=values["agent.skip_prior"],
+                        training_updates=updates,
                     ),
                 )
         # The source calls prefer_skip again after its offline phase.
@@ -375,6 +402,28 @@ def export(
         metadata["offline_replay_sha256"] = hashlib.sha256(
             stem.with_suffix(".replay.npz").read_bytes()
         ).hexdigest()
+        audit = dict(
+            base_version=PolicyArtifact(
+                metadata, agent.online.weights, agent.online.biases
+            ).version,
+            replay_sha256=metadata["offline_replay_sha256"],
+            completed_updates=agent.online.updates,
+            source_rows=[
+                {
+                    key: row[key]
+                    for key in ("source_row", "source_key", "day", "propensity")
+                }
+                for row in rows
+            ],
+            updates=updates,
+        )
+        data = gzip.compress(
+            json.dumps(audit, allow_nan=False, separators=(",", ":")).encode(),
+            compresslevel=6,
+            mtime=0,
+        )
+        stem.with_suffix(".training.json.gz").write_bytes(data)
+        metadata["training_audit_sha256"] = hashlib.sha256(data).hexdigest()
         (output / f"con_cddqn_{device}.json").write_text(
             json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
         )

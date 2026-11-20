@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -17,6 +18,7 @@ services:
 
   metabase_db:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER_METABASE}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_METABASE}
@@ -139,6 +141,7 @@ services:
 
   metabase:
     image: metabase/metabase:latest
+    restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:

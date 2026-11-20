@@ -87,5 +87,6 @@
   "weight_miss": 0.15,
   "sampling_sha256": "df9dc5397441cc4546c71a2bb9c2b3f1c73d4c1945546276c6957b6d7c57a892",
   "model_sha256": "6dc532bcfea72c12b5191f1fb63e9c4fbab64a5d181e04b8c5525f57fb85ecb1",
-  "offline_replay_sha256": "9625dfdd09a88c55cf7afa9825e1ec15badfdf111eea6d6488ed66bb813b9ccc"
+  "offline_replay_sha256": "9625dfdd09a88c55cf7afa9825e1ec15badfdf111eea6d6488ed66bb813b9ccc",
+  "training_audit_sha256": "7f95bf80af1d8a3be119226135634637d2d7cd1660efe81274b367e7d8ec9d26"
 }

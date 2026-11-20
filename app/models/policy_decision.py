@@ -30,6 +30,8 @@ class PolicyDecision(SQLModel, table=True):
     decided_at: datetime
     action: int
     propensity: float
+    q_values: list[float] | None = Field(default=None, sa_type=JSONB)
+    action_probabilities: list[float] | None = Field(default=None, sa_type=JSONB)
     state: List[float] = Field(sa_type=JSONB)
     safe_mask: List[bool] = Field(sa_type=JSONB)
     policy_version: str

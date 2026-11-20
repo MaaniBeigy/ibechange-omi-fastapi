@@ -55,7 +55,7 @@ def test_daily_plan_worker_retry_and_replacement(database, epoch, monkeypatch):
         == 200
     )
     monkeypatch.setattr(
-        PolicyArtifact, "decide", lambda self, state, mask: int(mask[1])
+        PolicyArtifact, "greedy_action", lambda self, values, mask: int(mask[1])
     )
     assert policy_worker.run_epoch(engine, epoch) == 1
     item = _query(client, epoch, "notification_plans").json()[uid]["contents"][0]
@@ -110,7 +110,11 @@ def test_daily_plan_worker_retry_and_replacement(database, epoch, monkeypatch):
             select(RecommendationPlan).where(RecommendationPlan.is_deleted == False)
         ).all()
         assert [row.content_type for row in active] == ["recommendation"]
-        assert len(db.exec(select(PolicyDecision)).all()) == 5
+        decisions = db.exec(select(PolicyDecision)).all()
+        assert len(decisions) == 5
+        for decision in decisions:
+            assert len(decision.q_values) == 2
+            assert decision.propensity == decision.action_probabilities[decision.action]
     listed = client.get("/selected_contents/").json()[uid]
     assert {row["plan_id"] for row in listed} == {"1842.0", "1842.1", "1843.0"}
 
@@ -276,13 +280,13 @@ def test_revise_precommitted_epoch_replaces_the_successor(database, epoch, monke
     first = daily_plan(day, contents=[{"id": "A", "type": "resource"}])
     assert client.post("/selected_contents/", json={uid: first}).status_code == 200
     monkeypatch.setattr(
-        PolicyArtifact, "decide", lambda self, state, mask: int(not mask[0])
+        PolicyArtifact, "greedy_action", lambda self, values, mask: int(not mask[0])
     )
     assert _query(client, epoch).status_code == 200
     slot = epoch + timedelta(minutes=15)
     monkeypatch.setattr(router, "_next_epoch", lambda now: slot)
     monkeypatch.setattr(
-        PolicyArtifact, "decide", lambda self, state, mask: int(mask[1])
+        PolicyArtifact, "greedy_action", lambda self, values, mask: int(mask[1])
     )
     assert (
         _query(client, slot).json()["recommendation_plans"][0]["plans"][0]["content_id"]

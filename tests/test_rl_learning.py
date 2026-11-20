@@ -137,7 +137,9 @@ def test_bounded_replay_mixing_pretraining_period_and_checkpoint_continuation():
     learner.store([transition(state=[0.8]), transition(state=[0.9])])
     assert len(learner.buffer) == 3
     assert learner.buffer[0]["state"] == [0.9]
-    assert learner._draw()[0]["objectives"]["engagement"] == 0.8
+    batch, offline_indices, personal_indices = learner._draw()
+    assert offline_indices == [0] and batch[0]["objectives"]["engagement"] == 0.8
+    assert batch[1]["state"] == {2: [0.7], 3: [0.8], 4: [0.9]}[personal_indices[0]]
     checkpoint = json.loads(json.dumps(learner.checkpoint()))
     restored = ConstrainedConservativeDoubleDQN(policy, seed=999, offline=offline)
     restored.restore(checkpoint)
@@ -152,7 +154,7 @@ def test_bounded_replay_mixing_pretraining_period_and_checkpoint_continuation():
     empty.pretrain(3)
     assert empty.online.updates == 0
     empty.store([transition(), transition()])
-    assert len(empty._draw()) == 2
+    assert len(empty._draw()[0]) == 2
 
 
 @pytest.mark.parametrize(
@@ -163,6 +165,8 @@ def test_bounded_replay_mixing_pretraining_period_and_checkpoint_continuation():
         {"safe_mask": [True]},
         {"safe_mask": [2, 1]},
         {"action": 2},
+        {"propensity": 0},
+        {"propensity": np.nan},
         {"safe_mask": [True, False]},
         {"bootstrap": 0.5},
         {"next_safe_mask": [False, False]},

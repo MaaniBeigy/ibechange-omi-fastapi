@@ -11,7 +11,12 @@ from sqlmodel import Session, select
 
 from app.models.event import Event
 from app.models.policy_decision import PolicyDecision
-from app.models.policy_learning import PolicyCheckpoint, PolicyLearner, PolicyTransition
+from app.models.policy_learning import (
+    PolicyCheckpoint,
+    PolicyLearner,
+    PolicyTrainingUpdate,
+    PolicyTransition,
+)
 from app.rl.learner import ConstrainedConservativeDoubleDQN, TrainingConfig
 from app.services.rl_observations import _identity
 from app.services.rl_policy import PolicyArtifact
@@ -371,7 +376,17 @@ def prepare_policy(
     cursor = learner.replay_count
     if fresh or learner.refit_due(learner.replay_count, day):
         _restore_ledger(db, user_id, artifact, learner)
-        learner.learn([_replay_row(row) for row in fresh], day)
+        updates = []
+
+        def record_update(details):
+            updates.append(dict(details, learner_id=stored.id, fitted_at=epoch))
+            if len(updates) == 100:
+                db.execute(PolicyTrainingUpdate.__table__.insert(), updates)
+                updates.clear()
+
+        learner.learn([_replay_row(row) for row in fresh], day, record_update)
+        if updates:
+            db.execute(PolicyTrainingUpdate.__table__.insert(), updates)
     for index, row in enumerate(fresh, cursor + 1):
         row.replay_index = index
         row.consumed_at = epoch

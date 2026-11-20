@@ -1,0 +1,14 @@
+# Server trust certificate configured by ARTEMIS_CA_CERT in .env.
+x-artemis-ca: &artemis-ca
+  type: bind
+  source: ${ARTEMIS_CA_CERT:?Set ARTEMIS_CA_CERT to the server certificate path}
+  target: ${ARTEMIS_CA_CERT}
+  read_only: true
+  bind:
+    create_host_path: false
+
+services:
+  app:
+    volumes: [*artemis-ca]
+  artemis-consumer:
+    volumes: [*artemis-ca]
