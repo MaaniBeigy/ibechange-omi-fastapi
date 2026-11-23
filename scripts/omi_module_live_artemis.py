@@ -12,16 +12,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 
-# Keep the standalone script entry point used by the orchestrator.
-if not __package__:
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import requests
-
-from app.services.artemis_producer_service import get_artemis_producer
 
 # ---------------------------------- Configurations  ----------------------------------
 logging.basicConfig(
@@ -126,6 +117,14 @@ def delivery_window(now):
 
 
 def set_notification_plans_artemis(**context):
+    if not __package__:
+        # The broker producer lives in the OMI checkout beside scripts/.
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from app.services.artemis_producer_service import get_artemis_producer
+
     params = delivery_window(context.get("now") or datetime.now(timezone.utc))
     plans = _omi_get("/notification_plans", params)
     producer = get_artemis_producer()

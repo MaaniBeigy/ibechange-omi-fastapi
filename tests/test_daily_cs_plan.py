@@ -228,6 +228,23 @@ def test_revised_artemis_events_preserve_feedback_and_mission_status(database):
         assert db.exec(select(MissionContent)).one().mission_end_time is not None
 
 
+def test_cronicle_can_load_the_delivery_script_outside_the_omi_checkout(tmp_path):
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[1] / "scripts/omi_module_live_artemis.py"
+    script = shutil.copy(source, tmp_path)
+    result = subprocess.run(
+        [sys.executable, "-I", script, "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "--delivery" in result.stdout
+
+
 def test_delivery_script_retries_same_committed_send(monkeypatch, caplog):
     from datetime import datetime, timezone
     from unittest.mock import Mock
@@ -246,7 +263,9 @@ def test_delivery_script_retries_same_committed_send(monkeypatch, caplog):
 
     monkeypatch.setattr(live, "_omi_get", read)
     producer = Mock()
-    monkeypatch.setattr(live, "get_artemis_producer", lambda: producer)
+    monkeypatch.setattr(
+        "app.services.artemis_producer_service.get_artemis_producer", lambda: producer
+    )
     for delay in (0, 1):
         live.set_notification_plans_artemis(now=now + timedelta(minutes=delay))
     first, second = producer.send_message.call_args_list
