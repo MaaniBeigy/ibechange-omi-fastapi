@@ -203,13 +203,35 @@ def deliver_http(now):
             headers=HEADERS_CS,
             timeout=30,
         ).raise_for_status()
-    if notifications:
-        requests.post(
-            build_url(EUT_BASE, "/internal/recommendations"),
-            json=notifications,
-            headers=HEADERS_EUT_POST,
-            timeout=30,
-        ).raise_for_status()
+    count = 0
+    for bucket in notifications.values():
+        for item in bucket["contents"]:
+            # OMI may serialize scheduled UTC times without the offset.
+            if datetime.fromisoformat(item["send_timestamp"]).tzinfo is None:
+                item["send_timestamp"] += "Z"
+            count += 1
+    if not count:
+        logging.info("No notification plans to post to EUT for this delivery window")
+        return
+
+    url = build_url(EUT_BASE, "/internal/recommendations")
+    response = requests.post(
+        url,
+        json=notifications,
+        headers=HEADERS_EUT_POST,
+        timeout=30,
+        allow_redirects=False,
+    )
+    if not 200 <= response.status_code < 300:
+        raise requests.HTTPError(
+            f"EUT POST {url} returned HTTP {response.status_code}", response=response
+        )
+    logging.info(
+        "EUT POST %s returned HTTP %d (notifications=%d)",
+        url,
+        response.status_code,
+        count,
+    )
 
 
 def main():
@@ -223,7 +245,12 @@ def main():
         required=True,
         help="1 imports historical CS selections, 2 and 3 refresh CS and deliver",
     )
-    parser.add_argument("--delivery", choices=("artemis", "vu"), default="artemis")
+    parser.add_argument(
+        "--delivery",
+        choices=("artemis", "vu"),
+        default="vu",
+        help="Deliver notifications over VU HTTP (default) or the Artemis queue",
+    )
     parser.add_argument(
         "--delivery-only",
         action="store_true",

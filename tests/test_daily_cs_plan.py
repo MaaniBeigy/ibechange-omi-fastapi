@@ -1,4 +1,6 @@
 import json
+import logging
+import sys
 from datetime import timedelta
 from uuid import uuid4
 
@@ -226,7 +228,7 @@ def test_revised_artemis_events_preserve_feedback_and_mission_status(database):
         assert db.exec(select(MissionContent)).one().mission_end_time is not None
 
 
-def test_delivery_script_retries_same_committed_send(monkeypatch):
+def test_delivery_script_retries_same_committed_send(monkeypatch, caplog):
     from datetime import datetime, timezone
     from unittest.mock import Mock
 
@@ -252,12 +254,79 @@ def test_delivery_script_retries_same_committed_send(monkeypatch):
     assert first.args[1]["notification_plan"]["notifications"] == [item]
     monkeypatch.setattr(live, "EUT_BASE", "http://vu.invalid")
     post = Mock()
+    post.return_value.status_code = 200
     monkeypatch.setattr(live.requests, "post", post)
-    live.deliver_http(now)
+    with caplog.at_level(logging.INFO):
+        live.deliver_http(now)
     assert [entry.args[0].split("/")[-1] for entry in post.call_args_list] == [
         "recommendation_plans",
         "recommendations",
     ]
+    url = "http://vu.invalid/internal/recommendations"
+    post.assert_called_with(
+        url,
+        json={uid: {"contents": [dict(item, send_timestamp="2026-11-20T14:15:00Z")]}},
+        headers=live.HEADERS_EUT_POST,
+        timeout=30,
+        allow_redirects=False,
+    )
+    assert f"EUT POST {url} returned HTTP 200 (notifications=1)" in caplog.messages
+    assert uid not in caplog.text
+
+
+@pytest.mark.parametrize("status", [302, 503])
+def test_eut_unsuccessful_post_and_empty_window(monkeypatch, caplog, status):
+    from datetime import datetime, timezone
+    from unittest.mock import Mock
+
+    from scripts import omi_module_live_artemis as live
+
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(live, "EUT_BASE", "https://vu.invalid")
+    monkeypatch.setattr(
+        live, "fetch_recommendation_plans", lambda now: {"recommendation_plans": []}
+    )
+    monkeypatch.setattr(live, "_omi_get", lambda *args: {})
+    post = Mock()
+    post.return_value.status_code = status
+    monkeypatch.setattr(live.requests, "post", post)
+    caplog.set_level(logging.INFO)
+    live.deliver_http(now)
+    post.assert_not_called()
+    assert "No notification plans" in caplog.text
+
+    timestamp = "2026-10-21T14:47:22.063Z"
+    monkeypatch.setattr(
+        live,
+        "_omi_get",
+        lambda *args: {"user": {"contents": [{"send_timestamp": timestamp}]}},
+    )
+    with pytest.raises(live.requests.HTTPError, match=f"HTTP {status}"):
+        live.deliver_http(now)
+    assert (
+        post.call_args.kwargs["json"]["user"]["contents"][0]["send_timestamp"]
+        == timestamp
+    )
+    assert not any(message.startswith("EUT POST") for message in caplog.messages)
+
+
+@pytest.mark.parametrize(
+    "options, expected", [([], "vu"), (["--delivery", "artemis"], "artemis")]
+)
+def test_delivery_cli_routes_to_one_destination(monkeypatch, options, expected):
+    from unittest.mock import Mock
+
+    from scripts import omi_module_live_artemis as live
+
+    http, broker = Mock(), Mock()
+    monkeypatch.setattr(
+        sys, "argv", ["omi", "--dag_id", "3", "--delivery-only", *options]
+    )
+    monkeypatch.setattr(live, "deliver_http", http)
+    monkeypatch.setattr(live, "set_notification_plans_artemis", broker)
+    live.main()
+    assert http.call_count == int(expected == "vu")
+    assert broker.call_count == int(expected == "artemis")
 
 
 def test_revise_precommitted_epoch_replaces_the_successor(database, epoch, monkeypatch):
