@@ -65,6 +65,14 @@ def _omi_get(path: str, params: dict | None = None):
     r = requests.get(url, headers=HEADERS_OMI, params=params or {}, timeout=30)
     if r.status_code != 200:
         raise RuntimeError(f"OMI GET {path} failed: {r.status_code} {r.text}")
+    skipped = r.headers.get("X-OMI-Infeasible-Participants")
+    if skipped:
+        logging.warning(
+            "OMI skipped new decisions for %s participant(s) with infeasible plans on %s. "
+            "See OMI app logs for the plan IDs and reasons.",
+            skipped,
+            path,
+        )
     try:
         return r.json()
     except ValueError as exc:
@@ -117,7 +125,11 @@ def build_url(base: str, path: str) -> str:
 
 def delivery_window(now):
     # The API can commit the next grid epoch. Starting an hour ahead misses it.
-    return {"start_time": utc_iso(now), "end_time": utc_iso(now + timedelta(hours=1))}
+    return {
+        "start_time": utc_iso(now),
+        "end_time": utc_iso(now + timedelta(hours=1)),
+        "skip_infeasible": "true",
+    }
 
 
 def set_notification_plans_artemis(**context):

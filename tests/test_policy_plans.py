@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -119,10 +119,12 @@ def _post_queue(client, epoch, user_id, plan_id, contents):
     assert response.status_code == 200
 
 
-def _query(client, epoch, endpoint="recommendation_plans"):
+def _query(client, epoch, endpoint="recommendation_plans", **params):
     start = (epoch - timedelta(minutes=1)).isoformat()
     end = (epoch + timedelta(minutes=1)).isoformat()
-    return client.get(f"/{endpoint}/", params={"start_time": start, "end_time": end})
+    return client.get(
+        f"/{endpoint}/", params={"start_time": start, "end_time": end, **params}
+    )
 
 
 def test_current_epoch_send_is_recorded_once(database, epoch, force_send):
@@ -908,7 +910,9 @@ def test_plan_router_rolls_back_unexpected_decision_error(monkeypatch):
 
     monkeypatch.setattr(router, "generate_recommendation_plan", failure)
     with pytest.raises(OSError, match="database unavailable"):
-        router._decide_current_epoch(FakeDatabase(), datetime.now(timezone.utc))
+        router._decide_current_epoch(
+            FakeDatabase(), datetime.now(timezone.utc), skip_infeasible=True
+        )
     assert calls == ["lock", "rollback"]
 
 
@@ -995,7 +999,7 @@ def test_notification_router_rejects_incomplete_legacy_row(
     )
     monkeypatch.setattr(router, "get_recommendation_plans", lambda *args: result)
     with pytest.raises(HTTPException, match=detail):
-        router.get_notification_plans("start", "end", None)
+        router.get_notification_plans(Response(), "start", "end", None)
 
 
 def test_scheduled_step_requires_timezone_and_stable_mission(database, epoch):

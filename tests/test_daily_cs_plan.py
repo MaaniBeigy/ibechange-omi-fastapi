@@ -276,9 +276,10 @@ def test_cronicle_uses_same_cs_for_refresh_and_returned_plans(
             Mock(status_code=200, json=lambda: selections),
             Mock(
                 status_code=200,
+                headers={},
                 json=lambda: {"recommendation_plans": [{"user_id": uid}]},
             ),
-            Mock(status_code=200, json=lambda: {}),
+            Mock(status_code=200, headers={}, json=lambda: {}),
         ]
     )
     post = Mock(return_value=Mock(status_code=200))
@@ -480,6 +481,62 @@ def test_dated_plan_reports_class_overflow(database, epoch):
     assert client.post("/selected_contents/", json={uid: payload}).status_code == 200
     assert policy_worker.run_epoch(engine, epoch) == 0
     assert "class limit" in _query(client, epoch).json()["detail"]
+    for path, empty in [
+        ("recommendation_plans", {"recommendation_plans": []}),
+        ("notification_plans", {}),
+    ]:
+        result = _query(client, epoch, path, skip_infeasible=True)
+        assert result.status_code == 200 and result.json() == empty
+        assert result.headers["X-OMI-Infeasible-Participants"] == "1"
+
+
+def test_cronicle_delivers_around_infeasible_daily_plans(
+    database, epoch, monkeypatch, caplog
+):
+    from unittest.mock import Mock
+
+    from scripts import omi_module_live_artemis as live
+
+    client, engine = database
+    first, overflow1, overflow2, last = sorted(str(uuid4()) for _ in range(4))
+    reminder = {"id": "D", "type": "day_reminder"}
+    resource = {"id": "S", "type": "resource"}
+    selections = {
+        first: daily_plan(epoch.date(), contents=[resource]),
+        overflow1: daily_plan(
+            epoch.date(), plan_id="p3", contents=[reminder] * 3 + [resource]
+        ),
+        overflow2: daily_plan(epoch.date(), plan_id="p4", contents=[reminder] * 4),
+        last: daily_plan(epoch.date(), contents=[resource]),
+    }
+    assert client.post("/selected_contents/", json=selections).status_code == 200
+    monkeypatch.setattr(
+        PolicyArtifact, "greedy_action", lambda self, values, mask: int(mask[1])
+    )
+    monkeypatch.setattr(live, "OMI_BASE", "http://testserver")
+    monkeypatch.setattr(live, "EUT_BASE", "http://eut.invalid")
+    monkeypatch.setattr(
+        live.requests, "get", lambda url, **kw: client.get(url, params=kw["params"])
+    )
+    post = Mock(return_value=Mock(status_code=200))
+    monkeypatch.setattr(live.requests, "post", post)
+    with caplog.at_level(logging.INFO):
+        live.deliver_http(epoch)
+
+    cs, eut = post.call_args_list
+    assert {p["user_id"] for p in cs.kwargs["json"]["recommendation_plans"]} == {
+        first,
+        last,
+    }
+    assert eut.args == ("http://eut.invalid/internal/recommendations",)
+    assert set(eut.kwargs["json"]) == {first, last}
+    assert "Skipping infeasible plan p3" in caplog.text
+    assert "Skipping infeasible plan p4" in caplog.text
+    assert "OMI skipped new decisions for 2" in caplog.text
+    assert "HTTP 200 (notifications=2)" in caplog.text
+    with Session(engine) as db:
+        decisions = db.exec(select(PolicyDecision)).all()
+        assert sorted(str(d.user_id) for d in decisions) == [first, last]
 
 
 @pytest.mark.parametrize(
