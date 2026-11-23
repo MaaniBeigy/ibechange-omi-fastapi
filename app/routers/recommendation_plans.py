@@ -1,10 +1,11 @@
 """Return committed notification plans and decide the current queue epoch."""
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlmodel import Session, select
 
 from app.dependencies import get_db
@@ -27,6 +28,8 @@ from app.services.recommendation_plan_service import (
 )
 from app.services.rl_policy import InfeasibleQueueError, load_policy_artifacts
 from app.utils.helpers import _aware_utc, _iso_to_utc_aware
+
+logger = logging.getLogger(__name__)
 
 router_recommendation_plans = APIRouter(
     prefix="/recommendation_plans", tags=["Recommendation Plans"]
@@ -69,22 +72,39 @@ def _eligible_users(db: Session) -> list[UUID]:
     ).all()
 
 
-def _decide_current_epoch(db: Session, epoch: datetime) -> None:
+def _decide_current_epoch(
+    db: Session, epoch: datetime, skip_infeasible: bool = False
+) -> int:
     """Read the eligible participant's day and revision after acquiring their lock."""
+    skipped = 0
     for user_id in _eligible_users(db):
         try:
             lock_user(db, user_id)
             current = current_queue(db, user_id, epoch)
             if current:
-                generate_recommendation_plan(current, epoch, db)
+                try:
+                    generate_recommendation_plan(current, epoch, db)
+                except InfeasibleQueueError as error:
+                    if not skip_infeasible:
+                        raise HTTPException(
+                            status_code=409, detail=str(error)
+                        ) from error
+                    logger.warning(
+                        "Skipping infeasible plan %s for participant %s at %s: %s",
+                        current.source_plan_id or current.id,
+                        user_id,
+                        epoch,
+                        error,
+                    )
+                    db.rollback()
+                    skipped += 1
+                    continue
             close_episode(db, user_id, epoch)
             db.commit()
-        except InfeasibleQueueError as error:
-            db.rollback()
-            raise HTTPException(status_code=409, detail=str(error)) from error
         except Exception:
             db.rollback()
             raise
+    return skipped
 
 
 def _read_plans(db: Session, start: datetime, end: datetime) -> RecommendationPlanList:
@@ -156,26 +176,34 @@ def _read_plans(db: Session, start: datetime, end: datetime) -> RecommendationPl
 
 @router_recommendation_plans.get("/", response_model=RecommendationPlanList)
 def get_recommendation_plans(
+    response: Response,
     start_time: str = Query(...),
     end_time: str = Query(...),
     db: Session = Depends(get_db),
+    skip_infeasible: bool = False,
 ):
     """Decide the next epoch if it is in the requested interval."""
     start, end = _window(start_time, end_time)
     epoch = _next_epoch(datetime.now(timezone.utc))
     if start <= epoch <= end:
-        _decide_current_epoch(db, epoch)
+        skipped = _decide_current_epoch(db, epoch, skip_infeasible)
+        if skipped:
+            response.headers["X-OMI-Infeasible-Participants"] = str(skipped)
     return _read_plans(db, start, end)
 
 
 @router_notification_plans.get("/", response_model=Dict[UUID, NotificationUserBucket])
 def get_notification_plans(
+    response: Response,
     start_time: str = Query(...),
     end_time: str = Query(...),
     db: Session = Depends(get_db),
+    skip_infeasible: bool = False,
 ):
     """Return committed sends in the delivery API response shape."""
-    plans = get_recommendation_plans(start_time, end_time, db)
+    plans = get_recommendation_plans(
+        response, start_time, end_time, db, skip_infeasible
+    )
     output = {}
     for bucket in plans.recommendation_plans:
         items = []
