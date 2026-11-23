@@ -245,6 +245,75 @@ def test_cronicle_can_load_the_delivery_script_outside_the_omi_checkout(tmp_path
     assert "--delivery" in result.stdout
 
 
+@pytest.mark.parametrize(
+    "configured, expected",
+    [
+        (None, "http://cs-rct-cs-api-1:8000"),
+        ("http://cs_module:8000/", "http://cs-rct-cs-api-1:8000"),
+        ("http://custom.invalid:8000", "http://custom.invalid:8000"),
+    ],
+)
+def test_cronicle_uses_same_cs_for_refresh_and_returned_plans(
+    monkeypatch, caplog, configured, expected
+):
+    import runpy
+    from pathlib import Path
+    from unittest.mock import Mock
+
+    import requests
+
+    if configured is None:
+        monkeypatch.delenv("CS_BASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("CS_BASE_URL", configured)
+    monkeypatch.setenv("OMI_BASE_URL", "http://omi.invalid")
+    monkeypatch.setenv("EUT_PRE_BASE_URL", "http://vu.invalid")
+    monkeypatch.setattr(sys, "argv", ["omi", "--dag_id", "2"])
+    uid = str(uuid4())
+    selections = {uid: daily_plan("2026-11-23")}
+    get = Mock(
+        side_effect=[
+            Mock(status_code=200, json=lambda: selections),
+            Mock(
+                status_code=200,
+                json=lambda: {"recommendation_plans": [{"user_id": uid}]},
+            ),
+            Mock(status_code=200, json=lambda: {}),
+        ]
+    )
+    post = Mock(return_value=Mock(status_code=200))
+    monkeypatch.setattr(requests, "get", get)
+    monkeypatch.setattr(requests, "post", post)
+    with caplog.at_level(logging.INFO):
+        runpy.run_path(
+            str(
+                Path(__file__).resolve().parents[1]
+                / "scripts/omi_module_live_artemis.py"
+            ),
+            run_name="__main__",
+        )
+    assert get.call_args_list[0].args == (expected + "/selected_contents",)
+    first, second = post.call_args_list
+    assert first.args == ("http://omi.invalid/selected_contents",)
+    assert first.kwargs["json"] == selections
+    assert second.args == (expected + "/recommendation_plans",)
+    assert "Content items by delivery date: {'2026-11-23': 3}" in caplog.text
+
+
+def test_cronicle_logs_empty_cs_refresh(monkeypatch, caplog):
+    from unittest.mock import Mock
+
+    from scripts import omi_module_live_artemis as live
+
+    monkeypatch.setattr(live, "_cs_get", lambda path: {})
+    post = Mock()
+    monkeypatch.setattr(live, "_omi_post", post)
+    with caplog.at_level(logging.INFO):
+        live.post_selected_contents()
+    post.assert_not_called()
+    assert "CS returned no participant selections" in caplog.messages
+
+
 def test_delivery_script_retries_same_committed_send(monkeypatch, caplog):
     from datetime import datetime, timezone
     from unittest.mock import Mock

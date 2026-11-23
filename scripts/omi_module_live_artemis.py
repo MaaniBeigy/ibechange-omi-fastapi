@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -24,7 +25,10 @@ logging.Formatter.converter = time.gmtime
 
 # ---------------------------------- Define variables ---------------------------------
 
-CS_BASE = os.getenv("CS_BASE_URL", "http://cs_module:8000").strip()
+CS_BASE = os.getenv("CS_BASE_URL", "").strip().rstrip("/")
+# Existing INT Cronicle jobs may still supply the pre-RCT Compose service name.
+if CS_BASE in ("", "http://cs_module:8000"):
+    CS_BASE = "http://cs-rct-cs-api-1:8000"
 OMI_BASE = os.getenv("OMI_BASE_URL", "http://172.31.20.104:3200").strip()
 EUT_BASE = os.getenv("EUT_PRE_BASE_URL")
 EUT_TOKEN = os.getenv("EUT_PRE_TOKEN")
@@ -179,8 +183,18 @@ def align_past_selected_content():
 # ────────────────────────────────────────────────────────────────────────
 def post_selected_contents(**context):
     data = _cs_get("/selected_contents")
-    if data:
-        _omi_post("selected_contents", data)
+    if not data:
+        logging.info("CS returned no participant selections")
+        return
+    _omi_post("selected_contents", data)
+    items_by_date = Counter()
+    for plan in data.values():
+        items_by_date[plan.get("delivery_date") or "undated"] += len(plan["contents"])
+    logging.info(
+        "OMI acknowledged CS refresh for %d participants. Content items by delivery date: %s",
+        len(data),
+        dict(sorted(items_by_date.items())),
+    )
 
 
 def fetch_recommendation_plans(**context):
