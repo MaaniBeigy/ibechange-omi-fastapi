@@ -47,7 +47,11 @@ def _device(decision: PolicyDecision) -> str:
 
 
 def _base_version(decision: PolicyDecision) -> str:
-    return decision.policy_version.split("-online-")[0].removesuffix("-omi2x2-v1")
+    return (
+        decision.policy_version.split("-online-")[0]
+        .split("-omi-limits-")[0]
+        .removesuffix("-omi2x2-v1")
+    )
 
 
 def record_next_state(db: Session, current: PolicyDecision) -> None:

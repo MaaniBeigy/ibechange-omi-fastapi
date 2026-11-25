@@ -137,7 +137,7 @@ def test_current_epoch_send_is_recorded_once(database, epoch, force_send):
     plans = first.json()["recommendation_plans"][0]["plans"]
     assert [item["content_id"] for item in plans] == ["R1"]
     assert second.json()["recommendation_plans"][0]["plans"] == plans
-    assert plans[0]["policy_version"].endswith("-omi2x2-v1")
+    assert plans[0]["policy_version"].endswith("-omi-limits-1-2-1-4")
     with Session(engine) as db:
         assert len(db.exec(select(RecommendationPlan)).all()) == 1
         decisions = db.exec(select(PolicyDecision)).all()
@@ -745,7 +745,7 @@ def test_reminder_deadline_before_decision_is_infeasible(database, monkeypatch):
     assert "No safe action completes" in response.json()["detail"]
 
 
-def test_three_due_reminders_exceed_daily_class_budget(
+def test_five_due_reminders_exceed_daily_class_budget(
     database, force_send, monkeypatch
 ):
     client, engine = database
@@ -761,7 +761,7 @@ def test_three_due_reminders_exceed_daily_class_budget(
         epoch,
         user_id,
         plan_id,
-        [_content(f"M{index}", "reminder") for index in range(3)],
+        [_content(f"M{index}", "reminder") for index in range(5)],
     )
     monkeypatch.setattr(router, "_next_epoch", lambda *_: epoch)
     response = _query(client, epoch)
@@ -771,7 +771,7 @@ def test_three_due_reminders_exceed_daily_class_budget(
         assert not db.exec(select(RecommendationPlan)).all()
 
 
-def test_future_third_reminder_can_wait_for_next_day(database, force_send, monkeypatch):
+def test_future_fifth_reminder_can_wait_for_next_day(database, force_send, monkeypatch):
     client, engine = database
     epoch = datetime(2026, 9, 28, 10, tzinfo=ZoneInfo("Europe/Berlin")).astimezone(
         timezone.utc
@@ -787,7 +787,7 @@ def test_future_third_reminder_can_wait_for_next_day(database, force_send, monke
         epoch,
         uuid4(),
         uuid4(),
-        [_content(f"M{index}", "reminder") for index in range(3)],
+        [_content(f"M{index}", "reminder") for index in range(5)],
     )
     assert _query(client, epoch).status_code == 200
     with Session(engine) as db:

@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
+from dotenv import load_dotenv
 
 from app.rl.learner import TrainingConfig
 from app.rl.replay import read_replay
@@ -49,10 +50,26 @@ QUEUE_FIELDS = tuple(
     for position in range(1, 5)
     for kind in ("recommendation", "reminder")
 )
-MIN_RECOMMENDATION_CLASS_PER_DAY = 1
-MAX_RECOMMENDATION_CLASS_PER_DAY = 2
-MIN_REMINDERS_PER_DAY = 1
-MAX_REMINDERS_PER_DAY = 2
+
+
+def _daily_limits(name: str, default_max: int) -> tuple[int, int]:
+    minimum_key = f"MIN_{name}_PER_DAY"
+    maximum_key = f"MAX_{name}_PER_DAY"
+    try:
+        minimum = int(os.getenv(minimum_key, "1"))
+        maximum = int(os.getenv(maximum_key, str(default_max)))
+    except ValueError as exc:
+        raise ValueError(f"{minimum_key} and {maximum_key} must be integers") from exc
+    if not 0 <= minimum <= maximum:
+        raise ValueError(f"Expected 0 <= {minimum_key} <= {maximum_key}")
+    return minimum, maximum
+
+
+load_dotenv()
+MIN_RECOMMENDATION_CLASS_PER_DAY, MAX_RECOMMENDATION_CLASS_PER_DAY = _daily_limits(
+    "RECOMMENDATION_CLASS", 2
+)
+MIN_REMINDERS_PER_DAY, MAX_REMINDERS_PER_DAY = _daily_limits("REMINDERS", 4)
 
 
 def state_fields(wearer: bool) -> tuple[str, ...]:

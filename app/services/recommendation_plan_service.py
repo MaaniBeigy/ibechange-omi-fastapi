@@ -319,20 +319,22 @@ def generate_recommendation_plan(
         ),
         "reminder": max(0, MAX_REMINDERS_PER_DAY - sent_reminders),
     }
+    sent_day = sum(
+        count for identity, count in combined_counts.items() if identity[0] == day
+    )
+    remaining_total = max(0, int(policy.metadata["cap_per_day"]) - sent_day)
     today_occurrences = []
     for row in occurrences:
         kind = policy_kind(row[2]["type"])
-        if remaining_by_class[kind] == 0:
+        class_full = remaining_by_class[kind] == 0
+        if class_full or len(today_occurrences) >= remaining_total:
+            limit = "content class" if class_full else "notification"
             if selected.delivery_date is not None:
-                raise InfeasibleQueueError(
-                    "Daily CS plan exceeds the content class limit"
-                )
+                raise InfeasibleQueueError(f"Daily CS plan exceeds the {limit} limit")
             if kind == "reminder":
                 deadline = deadline_resolver(db, selected, row[2], epoch)
                 if deadline is not None and _aware_utc(deadline) <= day_end:
-                    raise InfeasibleQueueError(
-                        "Daily content class limit would be exceeded"
-                    )
+                    raise InfeasibleQueueError(f"Daily {limit} limit would be exceeded")
             break
         today_occurrences.append(row)
         remaining_by_class[kind] -= 1
@@ -402,9 +404,6 @@ def generate_recommendation_plan(
         items.append(QueueItem(content["type"], deadline_minute, earliest_minute))
         deadlines.append(deadline)
 
-    sent_day = sum(
-        count for identity, count in combined_counts.items() if identity[0] == day
-    )
     sent_week = sum(combined_counts.values())
     last_planned = max(
         (
@@ -454,7 +453,11 @@ def generate_recommendation_plan(
         ),
     )
     index, key, content = occurrences[0]
-    policy_version = f"{decision.policy_version}-omi2x2-v1"
+    policy_version = (
+        f"{decision.policy_version}-omi-limits-"
+        f"{MIN_RECOMMENDATION_CLASS_PER_DAY}-{MAX_RECOMMENDATION_CLASS_PER_DAY}-"
+        f"{MIN_REMINDERS_PER_DAY}-{MAX_REMINDERS_PER_DAY}"
+    )
     recorded = PolicyDecision(
         user_id=user.id,
         plan_id=selected.id,

@@ -474,13 +474,52 @@ def test_revise_precommitted_epoch_replaces_the_successor(database, epoch, monke
         assert link.next_decision_id == actual.id and link.status == "pending"
 
 
-def test_dated_plan_reports_class_overflow(database, epoch):
+@pytest.mark.parametrize(
+    "recs,rems",
+    [(2, 0), (1, 1), (0, 2), (2, 1), (1, 2), (0, 3), (2, 2), (1, 3), (0, 4)],
+)
+def test_cs_daily_compositions(database, epoch, monkeypatch, recs, rems):
     client, engine = database
     uid = str(uuid4())
-    payload = daily_plan(epoch.date(), contents=[{"id": "R", "type": "resource"}] * 3)
+    kinds = ["resource", "recommendation"][:recs] + ["day_reminder"] * rems
+    contents = [{"id": f"C{i}", "type": kind} for i, kind in enumerate(kinds)]
+    payload = daily_plan(epoch.date(), contents=contents)
+    assert client.post("/selected_contents/", json={uid: payload}).status_code == 200
+    monkeypatch.setattr(
+        PolicyArtifact, "greedy_action", lambda self, values, mask: int(mask[1])
+    )
+    for index in range(len(contents)):
+        slot = epoch + timedelta(hours=index)
+        monkeypatch.setattr(router, "_next_epoch", lambda *_: slot)
+        response = _query(client, slot, "notification_plans")
+        assert response.status_code == 200
+        assert [item["id"] for item in response.json()[uid]["contents"]] == [
+            contents[index]["id"]
+        ]
+    with Session(engine) as db:
+        plans = db.exec(
+            select(RecommendationPlan).order_by(RecommendationPlan.scheduled_for)
+        ).all()
+        assert [plan.content_type for plan in plans] == kinds
+
+
+@pytest.mark.parametrize(
+    "kinds,limit",
+    [
+        (["resource"] * 3, "class limit"),
+        (["resource"] * 2 + ["day_reminder"] * 3, "notification limit"),
+    ],
+)
+def test_dated_plan_reports_overflow(database, epoch, kinds, limit):
+    client, engine = database
+    uid = str(uuid4())
+    payload = daily_plan(
+        epoch.date(),
+        contents=[{"id": f"C{i}", "type": kind} for i, kind in enumerate(kinds)],
+    )
     assert client.post("/selected_contents/", json={uid: payload}).status_code == 200
     assert policy_worker.run_epoch(engine, epoch) == 0
-    assert "class limit" in _query(client, epoch).json()["detail"]
+    assert limit in _query(client, epoch).json()["detail"]
     for path, empty in [
         ("recommendation_plans", {"recommendation_plans": []}),
         ("notification_plans", {}),
@@ -504,9 +543,9 @@ def test_cronicle_delivers_around_infeasible_daily_plans(
     selections = {
         first: daily_plan(epoch.date(), contents=[resource]),
         overflow1: daily_plan(
-            epoch.date(), plan_id="p3", contents=[reminder] * 3 + [resource]
+            epoch.date(), plan_id="p3", contents=[resource] * 3 + [reminder]
         ),
-        overflow2: daily_plan(epoch.date(), plan_id="p4", contents=[reminder] * 4),
+        overflow2: daily_plan(epoch.date(), plan_id="p4", contents=[reminder] * 5),
         last: daily_plan(epoch.date(), contents=[resource]),
     }
     assert client.post("/selected_contents/", json=selections).status_code == 200

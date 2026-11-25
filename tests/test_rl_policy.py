@@ -152,6 +152,22 @@ def test_daily_runner_caps_resources_with_recommendations():
         plan_daily_queue(policy, items, 900, 0, 0, 0, 240, 0, [], [], None)
 
 
+def test_daily_class_limits_from_environment(monkeypatch):
+    for name, default_max in [("RECOMMENDATION_CLASS", 2), ("REMINDERS", 4)]:
+        minimum, maximum = f"MIN_{name}_PER_DAY", f"MAX_{name}_PER_DAY"
+        monkeypatch.delenv(minimum, raising=False)
+        monkeypatch.delenv(maximum, raising=False)
+        assert rl_policy._daily_limits(name, default_max) == (1, default_max)
+        monkeypatch.setenv(minimum, "0")
+        monkeypatch.setenv(maximum, "3")
+        assert rl_policy._daily_limits(name, default_max) == (0, 3)
+        for low, high in [("one", "3"), ("1", ""), ("-1", "2"), ("3", "2")]:
+            monkeypatch.setenv(minimum, low)
+            monkeypatch.setenv(maximum, high)
+            with pytest.raises(ValueError, match=name):
+                rl_policy._daily_limits(name, default_max)
+
+
 def test_daily_runner_counts_prior_reminders_against_limit():
     policy = load_policy_artifacts()["nonwearer"]
     items = (QueueItem("reminder", 960), QueueItem("reminder", 1080))
@@ -161,14 +177,14 @@ def test_daily_runner_counts_prior_reminders_against_limit():
             items,
             900,
             0,
-            1,
-            1,
+            3,
+            3,
             240,
             0,
             [],
             [],
             1080,
-            sent_reminders=1,
+            sent_reminders=3,
         )
 
 
