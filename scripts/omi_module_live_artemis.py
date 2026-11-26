@@ -239,7 +239,7 @@ def deliver_http(now):
         logging.info("No notification plans to post to EUT for this delivery window")
         return
 
-    url = build_url(EUT_BASE, "/internal/recommendations")
+    url = build_url(EUT_BASE, "/internal/recommendations/")
     response = requests.post(
         url,
         json=notifications,

@@ -351,7 +351,7 @@ def test_delivery_script_retries_same_committed_send(monkeypatch, caplog):
         "recommendation_plans",
         "recommendations",
     ]
-    url = "http://vu.invalid/internal/recommendations"
+    url = "http://vu.invalid/internal/recommendations/"
     post.assert_called_with(
         url,
         json={uid: {"contents": [dict(item, send_timestamp="2026-11-20T14:15:00Z")]}},
@@ -567,7 +567,7 @@ def test_cronicle_delivers_around_infeasible_daily_plans(
         first,
         last,
     }
-    assert eut.args == ("http://eut.invalid/internal/recommendations",)
+    assert eut.args == ("http://eut.invalid/internal/recommendations/",)
     assert set(eut.kwargs["json"]) == {first, last}
     assert "Skipping infeasible plan p3" in caplog.text
     assert "Skipping infeasible plan p4" in caplog.text
