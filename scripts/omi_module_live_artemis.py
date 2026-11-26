@@ -221,13 +221,6 @@ def deliver_http(now):
         raise ValueError("EUT_PRE_BASE_URL is required for VU delivery")
     plans = fetch_recommendation_plans(now=now)
     notifications = _omi_get("/notification_plans", delivery_window(now))
-    if plans["recommendation_plans"]:
-        requests.post(
-            build_url(CS_BASE, "/recommendation_plans"),
-            json=plans,
-            headers=HEADERS_CS,
-            timeout=30,
-        ).raise_for_status()
     count = 0
     for bucket in notifications.values():
         for item in bucket["contents"]:
@@ -239,7 +232,7 @@ def deliver_http(now):
         logging.info("No notification plans to post to EUT for this delivery window")
         return
 
-    url = build_url(EUT_BASE, "/internal/recommendations/")
+    url = build_url(EUT_BASE, "/internal/recommendations/") + "/"
     response = requests.post(
         url,
         json=notifications,
@@ -257,6 +250,13 @@ def deliver_http(now):
         response.status_code,
         count,
     )
+    if plans["recommendation_plans"]:
+        requests.post(
+            build_url(CS_BASE, "/recommendation_plans"),
+            json=plans,
+            headers=HEADERS_CS,
+            timeout=30,
+        ).raise_for_status()
 
 
 def main():
