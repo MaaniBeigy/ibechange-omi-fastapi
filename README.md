@@ -406,75 +406,27 @@ and older checkpoints may have incomplete update histories.
 
 ### Policy behavior
 
-Online action selection uses epsilon-greedy exploration within the safe action
-set, decreasing from 0.05 to 0.01 over 90 days. Each decision records its exact
-action probability; a forced action has probability one. The greedy rule sends
-when the send value exceeds the wait value by more than 0.5.
+At each decision time, OMI chooses whether to send the next item in the
+participant's ordered queue or wait. It respects quiet hours, spacing, daily
+and weekly limits, and reminder deadlines. If a queue cannot be scheduled
+within those constraints, OMI reports it as infeasible.
 
-Fitting starts after at least 32 online transitions have been released and the
-daily refit interval has elapsed. The shared offline archive remains fixed while
-the participant's online replay grows. Missing shared replay is an error; the
-service does not silently switch to online-only batches. Raw Oura readings need
-a calibrated mapping to the model's standardized channels; until one is
-provided, wearers use the model's missing-reading block.
+By default, the daily class limits are one to four reminders and one to two
+recommendations or resources, subject to the artifact's total daily cap of four.
+The class limits can be configured in `.env` using
+`MIN_REMINDERS_PER_DAY`, `MAX_REMINDERS_PER_DAY`,
+`MIN_RECOMMENDATION_CLASS_PER_DAY` and `MAX_RECOMMENDATION_CLASS_PER_DAY`.
 
-These weights use the research simulator's two item classes. The application
-maps resources to its recommendation class and keeps reminders in the deadline
-class. The latest `/selected_contents` list supplies the ordered queue at each
-decision epoch. Repeated updates leave completed occurrences unchanged. The
-policy requires one to four reminders by default and one to two recommendations or resources
-per local day when each class is present in that day's ordered queue. If the
-queue order and remaining class budgets cannot include one of a supplied class,
-the endpoint reports an infeasible queue. Set the daily class limits in `.env` with
-`MIN_RECOMMENDATION_CLASS_PER_DAY`, `MAX_RECOMMENDATION_CLASS_PER_DAY`,
-`MIN_REMINDERS_PER_DAY` and `MAX_REMINDERS_PER_DAY` (defaults 1, 2, 1 and 4).
-The total daily cap in the supplied artifacts is four. The model artifact supplies the total weekly cap. Serving
-does not impose a weekly minimum because the supplied queue may have fewer
-items. `POLICY_TIMEZONE` sets the local day, with `Europe/Berlin` as the default.
-The `policy-worker` runs every real decision grid epoch. The plan endpoints can
-also commit their next grid epoch, at most one grid interval ahead, using only
-information already observed when the request arrives. Concurrent worker/API
-calls keep one action per user and epoch. Downtime is not filled with simulated
-historical decisions. The delivery integration must retrieve and deliver the
-committed plans; the mask guarantees feasible planning while actual delivery
-requires that integration and later broker confirmations.
-An unresolved reminder has no safe send action. The plan endpoint reports that
-queue as infeasible. For legacy queues, OMI matches active Artemis
-`task_step_scheduled` intervals by user UUID and mission ID. It uses the latest
-`endDate` **on the local decision day** as that day's hard deadline. A later
-Artemis schedule snapshot replaces the previous intervals for that mission
-process. The selected-content queue supplies the order and mission ID; its
-optional process and step IDs do not select the deadline. If no matching step
-ends on the decision day, OMI uses the selected mission's `mission_end_time`.
-When that end time is null, the deadline is seven days after
-`mission_start_time`. If both times are missing, or today's matching step has
-an ambiguous `endDate`, the deadline is unresolved. A reminder cannot be sent
-after its resolved deadline. An expired deadline leaves no safe action in the
-constraint mask, so the endpoint reports the queue as infeasible. Artemis
-timestamps without an offset use
-`ARTEMIS_SCHEDULE_TIMEZONE`, which defaults to `POLICY_TIMEZONE`.
+In online mode, each participant's model learns from their observed outcomes.
+The worker makes decisions on the policy grid, and a delivery service sends
+committed plans. Artemis confirmations and openings provide feedback for
+learning.
 
-The selected-content list can contain more than two items for a mission. OMI
-can keep later occurrences of legacy queues for subsequent days when a daily
-limit is reached and their deadlines permit. Dated CS plans are evaluated for
-their requested local day.
-
-For example, POLIMI CS may send the following queue repeatedly. The order and
-duplicate entries are retained. A new payload with the same `plan_id` replaces
-the current order.
-
-```json
-{
-  "3a6f5cbc-3e91-4a7a-8b41-7ce6bbd3372f": {
-    "plan_id": "1b1a1f51-701a-1ab0-afe0-05f100441796",
-    "contents": [
-      {"id": "NRc1", "type": "recommendation", "mission_id": "NM1"},
-      {"id": "NMr1", "type": "reminder", "mission_id": "NM1"},
-      {"id": "NRs2", "type": "resource", "mission_id": "NM1"}
-    ]
-  }
-}
-```
+`POLICY_TIMEZONE` sets the quiet hours and local day for **all participants**
+(default `Europe/Berlin`). Per-participant time zones are not yet supported.
+`ARTEMIS_SCHEDULE_TIMEZONE` sets the zone for Artemis task timestamps without
+an offset. Raw Oura readings use the missing-reading state until a calibrated
+mapping is available.
 
 ### Physical Activity
 
