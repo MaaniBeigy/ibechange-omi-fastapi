@@ -378,37 +378,33 @@ separate checkpoint paths for pretraining, online verification and frozen verifi
 
 ### Inspect decision and training history
 
-| Stored record | Contents |
-|---|---|
-| PostgreSQL `PolicyDecision` | Participant, epoch, plan occurrence, exact policy revision, observation, feasible actions, chosen action and its propensity. `q_values` and `action_probabilities` both use the order **skip, send**, including forced decisions. |
-| PostgreSQL `PolicyTrainingUpdate` | One row per learner and optimizer step. `fitted_at` is the policy epoch. Each row records the learning rate, CQL coefficient, mean squared TD loss, unweighted safe-action CQL loss, total loss, mean absolute TD error, ordered draw indices, pre-update Q-values, TD targets and signed residuals. Total loss equals TD loss plus the CQL coefficient times CQL loss. |
-| Offline `con_cddqn_<device>.training.json.gz` | Shared pretraining history, replay archive checksum, completed update count and source rows. Each source row identifies the one-based CSV data record (header excluded), source participant, day and logged chosen-action propensity. A missing source propensity is JSON null. |
-| Synthetic check `<out>/audit/day-*.json` | Per-day decisions, released transitions and optimizer steps. The absolute simulation minute links a transition to its decision. Use the same output and checkpoint locations when resuming. |
+OMI records decisions and learning updates in PostgreSQL:
 
-Join an online update to `PolicyLearner` by `learner_id` for its participant,
-device and base model version. Minibatch order is the zero-based `offline_indices`
-into that model's shared replay and source-row list, followed by the one-based
-`personal_replay_indices` into that learner's `PolicyTransition.replay_index`.
-Repeated indices are repeated draws. Every position has corresponding entries
-in `q_values`, `targets` and `td_residuals`. The personal transition links to
-its original decision and behavior propensity even after the in-memory ring wraps.
+- `PolicyDecision` stores the participant, time, chosen action, propensity,
+  Q-values, feasible actions and policy version. Q-values and probabilities use
+  the order **skip, send**.
+- `PolicyTrainingUpdate` stores the losses, minibatch draws and Q-values for
+  each optimizer update. Join it to `PolicyLearner` using `learner_id` to
+  identify the participant.
+- `PolicyTransition` links personal replay entries to their original decisions.
 
-The update rows, replay consumption and optimizer checkpoint commit in one
-PostgreSQL transaction. An interrupted fit retries from the previous commit.
-Add `--include-audit` to the participant checkpoint export to include decision
-scores, consumed transitions and recorded updates through its cutoff. Independent
-Python training loops can pass `on_update=records.append` to `learn` or
-`pretrain` to capture the same diagnostics.
+For a quick view of recent decisions, use the database credentials in your
+`.env`. With the example credentials, run:
 
-Migration `20261120_08` fills both historical action probabilities from each
-binary decision's recorded propensity. Historical live Q-values remain null
-and update history begins at the first instrumented fit. The optimizer
-continues its existing update numbering.
+```bash
+docker compose exec db psql -U omi_user -d omi_db -c 'SELECT user_id, decided_at, action, propensity FROM "PolicyDecision" ORDER BY decided_at DESC LIMIT 10;'
+```
 
-When resuming a legacy offline checkpoint, the exporter replays its prefix
-from the recorded training sample and seed. It includes the reconstructed
-updates when both networks, Adam state, counters and RNG state match the
-checkpoint exactly. Otherwise the audit starts at the next observed update.
+The bundled `con_cddqn_<device>.training.json.gz` files contain the shared
+pretraining audit. Synthetic checks write daily audit files under
+`build/online/audit` or `build/frozen/audit`. Add `--include-audit` to a
+participant checkpoint export to include its recorded history.
+
+Training updates and their checkpoints commit together, so an interrupted fit
+resumes from the last committed state. Older decisions may have null Q-values,
+and older checkpoints may have incomplete update histories.
+
+### Policy behavior
 
 Online action selection uses epsilon-greedy exploration within the safe action
 set, decreasing from 0.05 to 0.01 over 90 days. Each decision records its exact
