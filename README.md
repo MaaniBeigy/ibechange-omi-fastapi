@@ -14,116 +14,134 @@ FastAPI, a real-time policy worker and an Artemis consumer share PostgreSQL.
 The [implementation guide](docs/implementation.md) describes the selected settings,
 formal-component mapping, shared offline replay and simulation reproduction.
 
-## Implementation diagrams
+## Diagrams
 
-The editable sources are PlantUML files. The SVG files below are rendered locally.
+![iBeChange workflow](docs/diagrams/workflow-modules.png)
 
-The module view follows the project architecture in
-[workflow-modules.drawio](docs/diagrams/workflow-modules.drawio). Arrows point
-from the producer to the consumer of each data flow and carry a verb stereotype
-(«provide», «serve», «post», «call», «read», «query», «broadcast», «listen»,
-«persist»); external module internals are outside this repository.
+The workflow shows how OMI exchanges selections, notification plans and events
+with the other iBeChange modules.
 
-![iBeChange modules: component view](docs/diagrams/omi-components.svg)
+![iBeChange components](docs/diagrams/omi-components.svg)
 
-*Module view.* The iBeChange modules and their integration dependencies. Oura
-provides wearable data to xCare; the mobile client and the Virtual User call
-the xCare HTTP API. The Cronicle Orchestrator gets the ordered selected content
-from CS and posts it to OMI (POST /selected_contents/), then fetches
-GET /notification_plans/ from OMI and posts the plans to the VU, which takes
-the notification-delivery role here. OMI also broadcasts its plans to the
-Artemis broker; the broker never publishes — modules only listen or broadcast to it. OMI listens to mission schedules and events from the broker, and the VU broadcasts mission schedules and user events to the broker and listens to notification plans from it.
+![OMI internal components](docs/diagrams/omi-internal-components.svg)
 
-[Component source](docs/diagrams/omi-components.puml)
+## Local setup
 
-![OMI implementation: component view](docs/diagrams/omi-internal-components.svg)
-
-*OMI internals.* Only the OMI boundary and its eight internal components are shown. The HTTP API and the policy worker are the two triggers: each asks Notification planning to generate a plan and reads the Policy service's artifacts, while the worker also has the Policy learning service prepare the policy and the API locks/closes episodes through it; the Update consumer takes the same per-user lock via the learning service when ingesting Artemis messages. Notification planning queries the Observation service for the user's delivery history and calls the Policy service to decide the epoch. The Policy learning service reads the Policy service's artifacts, matches sent/opened events through the Observation service, and drives the ConCDDQN learner (learn/restore/checkpoint); the Policy service reads the learner's training configuration and replay format. External integration (CS, orchestrator, Artemis broker, delivery service) is covered by the module view.
-
-[Internal component source](docs/diagrams/omi-internal-components.puml)
-
-![Decision and delayed learning sequence](docs/diagrams/omi-learning-sequence.svg)
-
-*Learning sequence.* One decision epoch end to end: lock the participant,
-prepare the policy (release closed outcomes, optionally fit the personal
-learner), choose a safe wait/send action, persist the decision and plan; broker
-confirmations later release the delayed reward.
-
-[Sequence source](docs/diagrams/omi-learning-sequence.puml)
-
-![Learning classes and durable records](docs/diagrams/omi-learning-classes.svg)
-
-*Learning classes.* The serving policy (PolicyArtifact) and the learner
-(ConstrainedConservativeDoubleDQN with Network and TrainingConfig) with typed
-attributes and methods, plus the PostgreSQL tables (PolicyDecision,
-PolicyTransition, PolicyLearner and PolicyCheckpoint) that persist decisions, the replay ledger and
-per-user optimizer checkpoints.
-
-[Class source](docs/diagrams/omi-learning-classes.puml)
-
-Recreate the SVG files from the repository root with Docker and PlantUML's SVG
-output option. On PowerShell, use `${PWD}` in the volume argument.
+Install Docker Engine with Docker Compose. From the repository root, create a
+local environment file if you do not already have one. The example credentials
+are for local use.
 
 ```bash
-docker run --rm -v "$PWD:/work" -w /work \
-  ghcr.io/plantuml/plantuml@sha256:9b5071ab56a4192aac458ab4b0d42261c22c8109695894ae5be6013c3be6cac1 \
-  -tsvg 'docs/diagrams/*.puml'
+test -f .env || cp .env.example .env
 ```
 
-# Data model
+### Run a synthetic learning simulation
 
-![data-model](docs/data_model.svg)
-Opportune Moment Identification (OMI) of Behavior Change Recommendations (iBeChange-2025)
+The `learning-check` service runs the shipped OMI policy and learner on
+synthetic participants' responses. It requires the repository's model artifacts
+and Docker, with no CS, EUT, Artemis or database service. The response
+probabilities are artificial, so these runs check the software rather than
+reproduce the calibrated research study.
 
-## Deploy
-
-Copy `.env.example` to `.env`, set the database credentials and the Artemis
-host, credentials and assigned queue, and choose `POLICY_LEARNING_MODE=online`
-for per-user fitting or `frozen` for a fixed trial policy.
+Run online learning and inspect the results:
 
 ```bash
-docker volume create metabase_data
-docker compose up --build -d
-docker compose logs -f app policy-worker artemis-consumer
+docker compose --profile tools run --build --rm --no-deps learning-check
+cat build/online/summary.json
+```
+
+Run the fixed-policy comparison:
+
+```bash
+docker compose --profile tools run --build --rm --no-deps learning-check-frozen
+cat build/frozen/summary.json
+```
+
+Each default run simulates 14 days for the nonwearer model and writes
+`daily.csv`, `summary.json`, a checkpoint and per-day audit files in its
+output directory. The online run updates the personal model. The frozen run
+keeps the shipped weights fixed. Both commands resume their existing
+checkpoint if present. To start a separate run or test the wearer model,
+choose a new output and checkpoint path:
+
+```bash
+docker compose --profile tools run --build --rm --no-deps learning-check \
+  python -m scripts.check_policy_learning --days 14 --seed 11 --device wearer \
+  --out build/wearer-check --checkpoint build/wearer-check/checkpoint.json
+```
+
+Use the same seed, mode, device and checkpoint when resuming. `--days` is
+the total desired duration, not the number of additional days. The
+[implementation guide](docs/implementation.md#reproducing-the-calibrated-simulation-studies)
+describes the separate research simulator and its additional dependencies.
+
+### Run the local API and worker
+
+Start PostgreSQL, migrations, the API and policy worker without the Artemis
+consumer or Metabase:
+
+```bash
+docker compose up -d --build db migrate app policy-worker
+docker compose ps db migrate app policy-worker
+```
+
+Open [http://localhost:3200/docs](http://localhost:3200/docs) for the API.
+Submit test selections through the API to exercise the local service. Without
+Artemis, delivery confirmations and user feedback must be supplied by a test
+fixture for learning to observe them. The synthetic learning check above
+generates its own artificial responses.
+
+```bash
+docker compose logs -f app policy-worker
+```
+
+Stop the local services:
+
+```bash
 docker compose down
 ```
 
-Watch the components and inspect the decisions they record (propensities are
-stored per decision; use the credentials from your `.env` — `.env.example`
-uses `omi_user`/`omi_db`):
+The PostgreSQL volume retains data across restarts. To run the full integration,
+set the broker and delivery settings in `.env`, create the external Metabase
+volume, and start all default services:
 
 ```bash
+docker volume create metabase_data
+docker compose up -d --build
+docker compose ps
 docker compose logs -f app policy-worker artemis-consumer
-docker compose exec db psql -U omi_user -d omi_db -c "SELECT user_id, decided_at, action, propensity, policy_version FROM \"PolicyDecision\" ORDER BY decided_at DESC LIMIT 20;"
 ```
 
-Compose runs bootstrap/migrations before the API, Artemis consumer and policy
-worker. Code and artifacts are baked into the image; rebuild it after changes.
-PostgreSQL persists plans, replay and per-user optimizer checkpoints across
-container restarts. The external `metabase_data` volume remains required by the
-existing analytics services.
+Cronicle runs separately. On the INT server, include the certificate overlay
+when starting OMI:
 
-On the INT host, run `export COMPOSE_FILE=docker-compose.yml:compose.int.yml`
-in the deployment shell under `/home/tue/omi`. The overlay mounts the
-`ARTEMIS_CA_CERT` file read-only into the API and consumer. The integration
-delivery script reads `EUT_PRE_BASE_URL` and appends `/internal/recommendations`.
-For token-free INT delivery leave `EUT_PRE_TOKEN` unset in the environment
-of the process that runs the script.
+```bash
+export COMPOSE_FILE=docker-compose.yml:compose.int.yml
+docker compose up -d --build
+```
 
-Run checks against the dedicated disposable test database, separated from the
-application database:
+Set `ARTEMIS_CA_CERT` to the certificate path on that host. Configure
+`CS_BASE_URL`, `OMI_BASE_URL` and `EUT_PRE_BASE_URL` in the Cronicle
+process. INT uses token-free delivery when `EUT_PRE_TOKEN` is empty.
+
+### Run automated tests
+
+The checks profile builds a development image and starts a separate disposable
+PostgreSQL service. It runs formatting checks and the test suite with coverage,
+without CS, EUT or Artemis.
 
 ```bash
 docker compose --profile checks run --build --rm tests
 ```
 
-The `tests` service above already runs black, isort and the pytest suite with
-coverage against the disposable test database, so no local toolchain is needed.
+The current suite has five failing delivery-script assertions. They expect the
+previous EUT URL or CS posting order, while the revised script posts to EUT
+first and uses a trailing slash. Review the delivery behavior and tests
+together before relying on a passing suite.
 
-The [review verification](docs/review-verification.md) evaluates every RL review
-finding. [RL persistence](docs/rl-data-model.md) supplements the earlier diagram.
-Current implementation checks are recorded in
-[docs/verification/README.md](docs/verification/README.md).
+Current implementation verification is documented in
+[docs/verification/README.md](docs/verification/README.md). The
+[RL persistence guide](docs/rl-data-model.md) describes the stored records.
 
 ### Runtime services
 
@@ -133,8 +151,7 @@ dependencies in `requirements.txt` (development checks add
 Alembic manage persistence, `stomp.py` consumes broker messages, and NumPy
 implements the network and optimizer. A GPU is unnecessary.
 
-All long-lived processes run as Compose services started by
-`docker compose up --build -d`: the API (`app`, port 3200), the Artemis
+The full integration starts these long-lived Compose services: the API (`app`, port 3200), the Artemis
 consumer (`artemis-consumer`, queue from `ARTEMIS_QUEUE`) and the policy
 worker (`policy-worker`); migrations run first via the `migrate` service.
 
@@ -145,6 +162,9 @@ interprets offset-free task timestamps. `POLICY_ARTIFACT_DIR` optionally selects
 an alternative artifact directory. Restart the processes after changing artifacts.
 
 ### Selected Content
+
+The example uses a historical delivery date. Replace the dates and times with
+the current local day to exercise current planning.
 
 ```bash
 curl -X POST "http://localhost:3200/selected_contents/" -H "Content-Type: application/json" -d '{
@@ -187,6 +207,9 @@ under the 15-minute grid and 60-minute spacing.
 
 ### Recommendation Plan
 
+These example windows use historical dates. Change them to the interval you
+want to inspect.
+
 ```bash
 curl "http://localhost:3200/recommendation_plans/?start_time=2025-12-03T17:00:00&end_time=2025-12-07T21:00:00"
 ```
@@ -200,12 +223,31 @@ curl "http://localhost:3200/notification_plans/?start_time=2025-12-03T17:00:00&e
 For orchestrated delivery, refresh CS selections hourly and poll OMI at least
 once per decision grid, ahead of the desired send. The worker commits one epoch
 at a time. The reference integration supports `--dag_id 2` to refresh and
-deliver, and `--dag_id 3 --delivery-only` to deliver between refreshes. With `--delivery vu`, it posts committed
-plans to CS and notifications to VU. With `--delivery artemis`, it publishes a
+deliver, and `--dag_id 3 --delivery-only` to deliver between refreshes. The
+default delivery mode, `--delivery vu`, posts notification plans to the EUT
+endpoint `/internal/recommendations/` and then posts the corresponding committed
+plans to CS after EUT accepts the batch. An INFO entry records the
+HTTP status and notification count for each accepted batch. With `--delivery artemis`, it publishes a
 proposal per send with a stable broker duplicate-detection ID. Configure
 `CS_BASE_URL`, `OMI_BASE_URL` and the selected delivery destination. Cancelling
 a revision updates OMI's retrieval endpoints. A recipient that has already
 copied a proposal needs to reconcile it before dispatch.
+
+In INT, the Cronicle pipeline uses `http://cs-rct-cs-api-1:8000` for CS. It
+uses this address when `CS_BASE_URL` is empty or contains the old
+`http://cs_module:8000` address. Other explicitly configured CS URLs take
+precedence. The hourly job logs the participant count and number of content
+items per delivery date after OMI acknowledges the refresh.
+
+Cronicle requests both plan endpoints with `skip_infeasible=true`. If a
+participant's queue exceeds a daily limit or violates another scheduling
+constraint, OMI rolls back that participant's decision for the epoch, logs the
+participant, plan ID and reason, and continues processing the other queues.
+Both endpoints return committed sends in their usual response format, including
+an empty result when nothing is due. The `X-OMI-Infeasible-Participants`
+response header gives the number skipped on that request, which Cronicle logs.
+Requests without this option retain the HTTP 409 diagnostic. CS can submit a
+corrected daily revision with a new plan ID and later creation timestamp.
 
 ### Artemis updates
 
@@ -266,12 +308,12 @@ and optimizer state. The JSON files record configuration, state order and hashes
 of the sample, source run, weights, replay and detailed sampling records.
 Startup validates both models and the required replay archives.
 
-Recreate the bundled artifacts from the existing research run. The
-`export-artifacts` Compose service assumes the research checkout is the
-sibling directory `notification-reward-engineering` (the parent directory is
-mounted at `/research`) and writes to `build/policy_artifacts`:
+To export artifacts from compatible simulation decisions, place
+`decisions.csv.gz` and `run.json` in a directory and set its path. The
+exporter writes to `build/policy_artifacts`:
 
 ```bash
+export OMI_PRETRAINING_DATA_DIR=/absolute/path/to/pretraining-data
 docker compose --profile tools run --build --rm export-artifacts
 ```
 
@@ -289,8 +331,6 @@ cost, with elapsed-time discounting and CQL over feasible actions. Every decisio
 records its exact model/configuration revision. `frozen` records outcomes while
 using the fixed bundled artifact, without fitting or exploration. It does not
 serve a previously fitted participant checkpoint in frozen mode.
-The local runtime's source license and hashes are
-in [app/rl/NOTICE.md](app/rl/NOTICE.md).
 
 ### Resume a participant at a time checkpoint
 
@@ -382,32 +422,17 @@ service does not silently switch to online-only batches. Raw Oura readings need
 a calibrated mapping to the model's standardized channels; until one is
 provided, wearers use the model's missing-reading block.
 
-The daily learning check is independent of PostgreSQL and Artemis. It runs the
-actual network and policy with explicitly artificial response probabilities
-and four ordered items each day. Run both modes through the `tools` Compose
-profile; outputs land in `build/online` and `build/frozen`:
-
-```bash
-docker compose --profile tools run --build --rm learning-check
-docker compose --profile tools run --build --rm learning-check-frozen
-```
-
-Its CSV records daily sends, openings, fitting reward and cumulative gradient
-updates. The JSON reports weight hashes and constraint violations. The response
-probabilities in this check are artificial. Reproduction of the calibrated DBN
-experiments uses the separate research simulator and is documented in the
-[implementation guide](docs/implementation.md#reproducing-the-calibrated-simulation-studies).
-
 These weights use the research simulator's two item classes. The application
 maps resources to its recommendation class and keeps reminders in the deadline
 class. The latest `/selected_contents` list supplies the ordered queue at each
 decision epoch. Repeated updates leave completed occurrences unchanged. The
-policy requires one to two reminders and one to two recommendations or resources
+policy requires one to four reminders by default and one to two recommendations or resources
 per local day when each class is present in that day's ordered queue. If the
 queue order and remaining class budgets cannot include one of a supplied class,
-the endpoint reports an infeasible queue. These limits are fixed in the serving
-policy; the old `MIN_NOTIFICATIONS_*` and `MAX_NOTIFICATIONS_*` environment
-settings are unused. The model artifact supplies the total weekly cap. Serving
+the endpoint reports an infeasible queue. Set the daily class limits in `.env` with
+`MIN_RECOMMENDATION_CLASS_PER_DAY`, `MAX_RECOMMENDATION_CLASS_PER_DAY`,
+`MIN_REMINDERS_PER_DAY` and `MAX_REMINDERS_PER_DAY` (defaults 1, 2, 1 and 4).
+The total daily cap in the supplied artifacts is four. The model artifact supplies the total weekly cap. Serving
 does not impose a weekly minimum because the supplied queue may have fewer
 items. `POLICY_TIMEZONE` sets the local day, with `Europe/Berlin` as the default.
 The `policy-worker` runs every real decision grid epoch. The plan endpoints can
@@ -434,9 +459,9 @@ timestamps without an offset use
 `ARTEMIS_SCHEDULE_TIMEZONE`, which defaults to `POLICY_TIMEZONE`.
 
 The selected-content list can contain more than two items for a mission. OMI
-keeps the remaining occurrences for later days after two reminders or two
-recommendation-class items (recommendations and resources together) have been
-sent on one local day.
+can keep later occurrences of legacy queues for subsequent days when a daily
+limit is reached and their deadlines permit. Dated CS plans are evaluated for
+their requested local day.
 
 For example, POLIMI CS may send the following queue repeatedly. The order and
 duplicate entries are retained. A new payload with the same `plan_id` replaces

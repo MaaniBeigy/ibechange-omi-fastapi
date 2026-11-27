@@ -40,8 +40,8 @@
     "queue_4_recommendation",
     "queue_4_reminder"
   ],
-  "source_decisions": "/mnt/c/Users/20240700/projects/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz",
-  "source_run": "/mnt/c/Users/20240700/projects/notification-reward-engineering/data/learn/wearable_940/run.json",
+  "source_decisions": "decisions.csv.gz",
+  "source_run": "run.json",
   "sample_sha256": "23f9b31df844ddfba567e8fb75f10d92f34a5a4ecc328d5f47a2812d30f5216a",
   "source_run_sha256": "f5627e0fee6bfcaceec63ff37604defba8458e004ce25fc9333fd209a0d73f22",
   "source_reward_arm": "F",

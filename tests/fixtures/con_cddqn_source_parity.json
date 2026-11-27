@@ -1,5 +1,5 @@
 {
-  "source": "notification-reward-engineering: ddqn.Network, DoubleDQN.update/_penalty, ConstrainedBatch (hashes in app/rl/NOTICE.md)",
+  "source": "Reference network, Double DQN update, penalty and constrained batch",
   "initial": [
     [
       [

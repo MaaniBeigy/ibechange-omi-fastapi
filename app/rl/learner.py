@@ -1,7 +1,6 @@
 """Constrained conservative Double DQN with durable optimizer checkpoints.
 
 SPDX-License-Identifier: GPL-3.0-only
-Adapted from notifsim/agents/{ddqn,cddqn,constrained}.py; see NOTICE.md.
 """
 
 import hashlib

@@ -136,8 +136,8 @@ services:
     profiles: [tools]
     volumes:
       - .:/app
-      - ..:/research
-    command: ["python", "-m", "scripts.train_policy_artifacts", "--log", "/research/notification-reward-engineering/data/learn/wearable_940/decisions.csv.gz", "--run", "/research/notification-reward-engineering/data/learn/wearable_940/run.json", "--config", "configs/omi_concddqn.json", "--out", "build/policy_artifacts", "--limit", "20000", "--scan-limit", "5000000", "--steps", "2000", "--seed", "20261104", "--checkpoint-dir", "build/pretraining-checkpoints"]
+      - ${OMI_PRETRAINING_DATA_DIR:-./data/pretraining}:/pretraining:ro
+    command: ["python", "-m", "scripts.train_policy_artifacts", "--log", "/pretraining/decisions.csv.gz", "--run", "/pretraining/run.json", "--config", "configs/omi_concddqn.json", "--out", "build/policy_artifacts", "--limit", "20000", "--scan-limit", "5000000", "--steps", "2000", "--seed", "20261104", "--checkpoint-dir", "build/pretraining-checkpoints"]
 
   metabase:
     image: metabase/metabase:latest

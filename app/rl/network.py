@@ -1,7 +1,6 @@
-"""Adam/ReLU network extracted from notification-reward-engineering.
+"""Adam/ReLU network for the OMI learner.
 
 SPDX-License-Identifier: GPL-3.0-only
-Source: src/notifsim/agents/ddqn.py; see NOTICE.md in this directory.
 """
 
 import numpy as np
